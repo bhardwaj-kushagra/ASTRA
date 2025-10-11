@@ -10,12 +10,12 @@ $services = @(
 
 foreach ($service in $services) {
     try {
-        $response = Invoke-WebRequest -Uri $service.URL -TimeoutSec 2 -ErrorAction Stop
-        Write-Host "OK $($service.Name) Service: RUNNING" -ForegroundColor Green
+        $null = Invoke-WebRequest -Uri $service.URL -TimeoutSec 2 -ErrorAction Stop
+        Write-Host "✓ $($service.Name) Service: RUNNING" -ForegroundColor Green
         Write-Host "  URL: $($service.URL)"
     }
     catch {
-        Write-Host "WAIT $($service.Name) Service: NOT READY" -ForegroundColor Yellow
+        Write-Host "⏳ $($service.Name) Service: NOT READY" -ForegroundColor Yellow
         Write-Host "  URL: $($service.URL)"
     }
     Write-Host ""
