@@ -1,0 +1,5 @@
+This is a sample text file for testing ASTRA's ingestion capabilities.
+
+The content here could be human-written or AI-generated. The detection service will analyze it and provide a classification with confidence scores.
+
+Sample narrative: The recent developments in artificial intelligence have shown remarkable progress, particularly in natural language processing and understanding. Large language models have demonstrated the ability to generate coherent, contextually relevant text across various domains and applications.
