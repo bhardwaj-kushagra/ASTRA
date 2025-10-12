@@ -14,12 +14,12 @@ import requests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'schemas')))
 
 from models import AnalyticsRecord, DetectionRequest, DetectionResult, ContentEvent
-from store import AnalyticsStore
+from sqlite_store import SQLiteAnalyticsStore
 
 app = FastAPI(title="ASTRA Risk Analytics Service", version="0.1.0")
 
-# Global store instance
-analytics_store = AnalyticsStore()
+# Global store instance (SQLite for persistent storage)
+analytics_store = SQLiteAnalyticsStore()
 
 # Templates for simple HTML dashboard
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))

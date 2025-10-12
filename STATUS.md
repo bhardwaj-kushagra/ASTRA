@@ -1,11 +1,17 @@
 # 🎉 ASTRA Prototype - Successfully Running!
 
-## Status: ✅ ALL SERVICES OPERATIONAL
+## Status: ✅ ALL SERVICES OPERATIONAL (with SQLite Persistence)
 
 ### Services Running:
-- ✅ **Ingestion Service** - http://localhost:8001
+- ✅ **Ingestion Service** - http://localhost:8001 (SQLite storage)
 - ✅ **Detection Service** - http://localhost:8002  
-- ✅ **Analytics Dashboard** - http://localhost:8003
+- ✅ **Analytics Dashboard** - http://localhost:8003 (SQLite storage)
+- ✅ **Database** - `data\astra.db` (persistent storage)
+
+### Storage:
+- ✅ **SQLite Database** - All data persists across restarts
+- 📊 **3 Tables:** content_events, detection_results, analytics_records
+- 💾 **Location:** `C:\A Developer's Stuff\ASTRA\data\astra.db`
 
 ---
 

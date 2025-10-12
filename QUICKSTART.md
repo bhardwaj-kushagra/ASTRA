@@ -40,6 +40,8 @@ This is a minimal viable prototype of ASTRA demonstrating the core detection pip
 
 ### Quick Setup (Recommended)
 
+**Step 1: Install Dependencies**
+
 From the ASTRA root directory, run the automated setup script:
 
 ```powershell
@@ -47,7 +49,20 @@ From the ASTRA root directory, run the automated setup script:
 ```
 
 This will:
-- Create a virtual environment
+- Install required Python packages (fastapi, transformers, sqlalchemy, etc.)
+- Download AI models on first run
+
+**Step 2: Initialize Database**
+
+Initialize the SQLite database for persistent storage:
+
+```powershell
+python tools\scripts\init_db.py
+```
+
+This creates `data\astra.db` with all necessary tables.
+
+### Manual Setup
 - Install all dependencies for all services
 - Activate the environment
 

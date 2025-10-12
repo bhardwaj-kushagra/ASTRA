@@ -99,6 +99,9 @@ services/*/__pycache__/
 # Redis dump
 dump.rdb
 
+# Keep sample data
+!data/samples/*.txt
+
 # Docker
 .dockerignore
 docker-compose.override.yml

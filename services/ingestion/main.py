@@ -12,15 +12,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from models import ContentEvent
 from connector import ConnectorRegistry
-from publisher import InMemoryPublisher
+from sqlite_publisher import SQLitePublisher
 
 # Import connectors to register them
 from connectors import file_connector, http_connector
 
 app = FastAPI(title="ASTRA Ingestion Service", version="0.1.0")
 
-# Global publisher instance (in-memory for MVP)
-publisher = InMemoryPublisher()
+# Global publisher instance (SQLite for persistent storage)
+publisher = SQLitePublisher()
 
 
 class ConnectorConfig(BaseModel):
@@ -80,7 +80,7 @@ async def get_events(limit: Optional[int] = 100):
     Args:
         limit: Maximum number of events to return
     """
-    all_events = publisher.get_all_events()
+    all_events = await publisher.get_all_events()
     return all_events[-limit:] if limit else all_events
 
 
