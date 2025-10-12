@@ -49,6 +49,59 @@ Evolvability:
 - Database engine can be swapped by adjusting the SQLAlchemy engine URL and introducing migrations.
 - Connectors and detectors are pluggable via registries.
 
+### 2.1 Architecture (component) diagram
+
+```mermaid
+graph TD
+    subgraph Client
+      UI[Browser / Script]
+    end
+
+    UI -->|HTTP| ING[Ingestion Service\n:8001]
+    UI -->|HTTP| DET[Detection Service\n:8002]
+    UI -->|HTTP| ANA[Risk Analytics Service\n:8003]
+
+    subgraph Persistence
+      DB[(SQLite\n data/astra.db)]
+    end
+
+    ING -->|writes| DB
+    DET -->|writes| DB
+    ANA -->|reads/writes| DB
+
+    ANA -->|/dashboard| UI
+```
+
+### 2.2 Data flow (sequence) diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cl as Client
+    participant ING as Ingestion (8001)
+    participant DET as Detection (8002)
+    participant ANA as Analytics (8003)
+    participant DB as SQLite (astra.db)
+
+    Cl->>ING: POST /ingest (connector config)
+    ING->>DB: INSERT content_events
+    ING-->>Cl: 200 OK (ingested IDs)
+
+    Cl->>DET: POST /detect { text }
+    DET->>DB: INSERT detection_results
+    DET-->>Cl: 200 OK { label, confidence }
+
+    Cl->>ANA: POST /analyze { text }
+    ANA->>DET: /detect { text }
+    DET-->>ANA: { label, confidence }
+    ANA->>DB: INSERT analytics_records
+    ANA-->>Cl: 200 OK { stored: true }
+
+    Cl->>ANA: GET /dashboard | /records | /stats
+    ANA->>DB: SELECT aggregates/recent
+    ANA-->>Cl: HTML/JSON
+```
+
 ## 3. Folder Structure and Key Files (map)
 
 - services/
@@ -295,3 +348,20 @@ References
 ---
 
 If anything is unclear, open an issue or start a discussion. Contributions are welcome!
+
+## 13. Smoke Test (End-to-End)
+
+Use the provided script to validate the core flow quickly (detection call may require model download on first run):
+
+```powershell
+.\tools\\scripts\\smoke-test.ps1
+```
+
+What it does:
+- Verifies service health on 127.0.0.1:8001–8003
+- Calls Detection /detect with a tiny sample
+- Calls Risk Analytics /analyze to store a record
+- Reads /records and /stats and prints a summary
+
+Expected outcome:
+- PASS summary with HTTP 200 responses; /records includes the new entry. If detection model isn’t available, the script prints a warning and continues with partial checks.
