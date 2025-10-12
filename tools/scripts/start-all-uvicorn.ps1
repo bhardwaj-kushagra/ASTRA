@@ -20,8 +20,8 @@ function Start-Uvicorn {
         [string]$WorkDir,
         [int]$Port
     )
-    $args = @('-m','uvicorn','main:app','--host','127.0.0.1','--port',"$Port")
-    Start-Process -FilePath $pythonExe -WorkingDirectory $WorkDir -ArgumentList $args | Out-Null
+    $uvArgs = @('-m','uvicorn','main:app','--host','127.0.0.1','--port',"$Port")
+    Start-Process -FilePath $pythonExe -WorkingDirectory $WorkDir -ArgumentList $uvArgs | Out-Null
 }
 
 foreach ($svc in $services) {

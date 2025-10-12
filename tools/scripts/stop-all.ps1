@@ -8,12 +8,12 @@ $ports = @(8001, 8002, 8003)
 $svcDirsRegex = 'services\\(ingestion|detection|risk-analytics)'
 $stopped = New-Object System.Collections.Generic.HashSet[int]
 
-function Stop-ByPid {
-    param([int]$Pid)
+function Stop-ProcessTreeSafely {
+    param([int]$ProcessId)
     try {
-        if (-not $stopped.Contains($Pid)) {
-            Stop-Process -Id $Pid -Force -ErrorAction SilentlyContinue
-            [void]$stopped.Add($Pid)
+        if (-not $stopped.Contains($ProcessId)) {
+            Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+            [void]$stopped.Add($ProcessId)
         }
     } catch {}
 }
@@ -27,7 +27,7 @@ foreach ($p in $ports) {
                 Write-Host ("[KILL] Port {0} -> PID {1} (tree)" -f $p, $c.OwningProcess) -ForegroundColor Yellow
                 # Kill entire process tree to catch uvicorn worker/child processes
                 Start-Process -FilePath taskkill.exe -ArgumentList "/PID $($c.OwningProcess) /F /T" -NoNewWindow -Wait
-                Stop-ByPid -Pid $c.OwningProcess
+                Stop-ProcessTreeSafely -ProcessId $c.OwningProcess
             }
         }
     } catch {}
@@ -40,7 +40,7 @@ try {
     }
     foreach ($proc in $py) {
         Write-Host ("[KILL] Python PID {0}" -f $proc.ProcessId) -ForegroundColor Yellow
-        Stop-ByPid -Pid [int]$proc.ProcessId
+    Stop-ProcessTreeSafely -ProcessId [int]$proc.ProcessId
     }
 } catch {}
 
@@ -51,7 +51,7 @@ try {
     }
     foreach ($proc in $ps) {
         Write-Host ("[KILL] PowerShell PID {0}" -f $proc.ProcessId) -ForegroundColor Yellow
-        Stop-ByPid -Pid [int]$proc.ProcessId
+    Stop-ProcessTreeSafely -ProcessId [int]$proc.ProcessId
     }
 } catch {}
 
