@@ -13,10 +13,11 @@ function Test-Url200 {
 
 Write-Host "==> Running ASTRA smoke test..." -ForegroundColor Cyan
 
-$base = 'http://127.0.0.1'
-$ing = "$base:8001"
-$det = "$base:8002"
-$ana = "$base:8003"
+# Base URL for local services (use IPv4 to avoid localhost/IPv6 issues)
+$baseUrl = 'http://127.0.0.1'
+$ing = "$baseUrl:8001"
+$det = "$baseUrl:8002"
+$ana = "$baseUrl:8003"
 
 # Health checks
 $ok_ing = Test-Url200 "$ing/"
@@ -62,7 +63,9 @@ try {
     $s = Invoke-WebRequest -UseBasicParsing -Uri "$ana/stats" -TimeoutSec 10
     $rc = ($r.Content | ConvertFrom-Json).Count
     $sj = $s.Content | ConvertFrom-Json
-    Write-Host "[Records] last=$rc; [Stats] keys=$(($sj | Get-Member -MemberType NoteProperty | Select -ExpandProperty Name) -join ',')" -ForegroundColor Green
+    # Use the full cmdlet name instead of the Select alias to satisfy script analyzers
+    $statKeys = ($sj | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ','
+    Write-Host "[Records] last=$rc; [Stats] keys=$statKeys" -ForegroundColor Green
 } catch {
     Write-Host "[Records/Stats] FAILED: $($_.Exception.Message)" -ForegroundColor Yellow
 }
