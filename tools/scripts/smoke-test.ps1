@@ -15,9 +15,11 @@ Write-Host "==> Running ASTRA smoke test..." -ForegroundColor Cyan
 
 # Base URL for local services (use IPv4 to avoid localhost/IPv6 issues)
 $baseUrl = 'http://127.0.0.1'
-$ing = "$baseUrl:8001"
-$det = "$baseUrl:8002"
-$ana = "$baseUrl:8003"
+$ing = $baseUrl + ':8001'
+$det = $baseUrl + ':8002'
+$ana = $baseUrl + ':8003'
+
+Write-Host "DEBUG: constructed URLs -> ing='$ing' det='$det' ana='$ana'" -ForegroundColor Cyan
 
 # Health checks
 $ok_ing = Test-Url200 "$ing/"

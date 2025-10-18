@@ -13,22 +13,29 @@ from models import DetectionRequest, DetectionResult
 from detector import DetectorRegistry
 
 # Import detectors to register them
-from detectors import zero_shot_detector
+from detectors import zero_shot_detector  # keep import to register zero-shot
+from detectors import simple_detector      # import to register simple
 
 app = FastAPI(title="ASTRA Detection Service", version="0.1.0")
 
 # Initialize default detector (lazy loading for production)
 default_detector = None
+DETECTOR_NAME = os.getenv("DETECTOR_NAME", "simple")
 
 
 def get_detector():
     """Lazy initialization of detector."""
     global default_detector
     if default_detector is None:
-        default_detector = DetectorRegistry.get_detector("zero-shot", {
-            "model_id": "facebook/bart-large-mnli",
-            "labels": ["AI-generated", "human-written", "suspicious"]
-        })
+        if DETECTOR_NAME == "zero-shot":
+            default_detector = DetectorRegistry.get_detector("zero-shot", {
+                "model_id": "facebook/bart-large-mnli",
+                "labels": ["AI-generated", "human-written", "suspicious"]
+            })
+        else:
+            default_detector = DetectorRegistry.get_detector("simple", {
+                "threshold_len": 600
+            })
     return default_detector
 
 
@@ -39,7 +46,8 @@ async def root():
         "service": "detection",
         "version": "0.1.0",
         "status": "running",
-        "available_detectors": DetectorRegistry.list_detectors()
+        "available_detectors": DetectorRegistry.list_detectors(),
+        "active_detector": DETECTOR_NAME
     }
 
 
