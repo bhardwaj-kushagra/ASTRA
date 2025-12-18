@@ -5,6 +5,7 @@ This guide helps you demonstrate the ASTRA FastAPI endpoints to your mentor or a
 ## Prerequisites
 
 Before starting the demo, ensure:
+
 1. All services are running (Ingestion on 8001, Detection on 8002, Risk Analytics on 8003)
 2. Database is initialized (`python tools\scripts\init_db.py`)
 3. You have a tool to send HTTP requests (Postman, curl, or Python script)
@@ -12,11 +13,13 @@ Before starting the demo, ensure:
 ## Starting the Services
 
 ### Option 1: Automated Start (Recommended)
+
 ```powershell
 .\tools\scripts\start-all-services.ps1
 ```
 
 ### Option 2: Manual Start (3 terminals)
+
 ```powershell
 # Terminal 1 - Ingestion
 cd services\ingestion
@@ -51,6 +54,7 @@ curl http://localhost:8003
 ```
 
 **Expected Response (Ingestion):**
+
 ```json
 {
   "service": "ingestion",
@@ -61,6 +65,7 @@ curl http://localhost:8003
 ```
 
 **Expected Response (Detection):**
+
 ```json
 {
   "service": "detection",
@@ -86,12 +91,14 @@ curl -X POST http://localhost:8001/ingest `
 ```
 
 **What this does:**
+
 - Reads all `.txt` files from `data/samples` directory
 - Creates ContentEvent objects for each file
 - Stores them in SQLite database
 - Returns summary with event IDs
 
 **Expected Response:**
+
 ```json
 {
   "status": "success",
@@ -110,6 +117,7 @@ curl -X POST http://localhost:8001/ingest `
 ```
 
 **What this does:**
+
 - Fetches content from specified URLs
 - Creates ContentEvent for each response
 - Stores in database
@@ -129,6 +137,7 @@ curl "http://localhost:8001/events?limit=5"
 ```
 
 **Expected Response:**
+
 ```json
 [
   {
@@ -159,6 +168,7 @@ curl -X POST http://localhost:8002/detect `
 ```
 
 **Expected Response:**
+
 ```json
 {
   "label": "human-written",
@@ -183,6 +193,7 @@ curl -X POST http://localhost:8002/detect `
 ```
 
 **Expected Response:**
+
 ```json
 {
   "label": "AI-generated",
@@ -205,6 +216,7 @@ curl http://localhost:8002/models
 ```
 
 **Expected Response:**
+
 ```json
 {
   "detectors": ["simple", "rag", "zero-shot"],
@@ -227,6 +239,7 @@ curl -X POST http://localhost:8003/analyze `
 ```
 
 **Expected Response:**
+
 ```json
 {
   "record_id": "rec_001",
@@ -250,12 +263,14 @@ curl -X POST http://localhost:8003/sync-from-ingestion
 ```
 
 **What this does:**
+
 1. Fetches all events from Ingestion service (port 8001)
 2. Sends each to Detection service (port 8002)
 3. Stores results in Analytics database
 4. Returns summary
 
 **Expected Response:**
+
 ```json
 {
   "status": "success",
@@ -284,6 +299,7 @@ curl "http://localhost:8003/records?limit=10"
 ```
 
 **Expected Response:**
+
 ```json
 {
   "total": 15,
@@ -311,6 +327,7 @@ curl http://localhost:8003/stats
 ```
 
 **Expected Response:**
+
 ```json
 {
   "total_records": 15,
@@ -335,11 +352,13 @@ curl http://localhost:8003/stats
 **Endpoint:** `GET http://localhost:8003/dashboard`
 
 **Open in browser:**
-```
+ 
+```text
 http://localhost:8003/dashboard
 ```
 
 This provides a visual HTML interface showing:
+
 - Real-time statistics
 - Detection history
 - Confidence distribution charts
@@ -463,6 +482,7 @@ if __name__ == "__main__":
 ```
 
 **Run it:**
+
 ```powershell
 python demo_api.py
 ```
@@ -480,6 +500,7 @@ python demo_api.py
    - URL: `http://localhost:8002/detect`
    - Headers: `Content-Type: application/json`
    - Body (raw JSON):
+     
      ```json
      {
        "text": "Sample text to analyze"
@@ -494,13 +515,14 @@ python demo_api.py
 
 FastAPI automatically generates interactive documentation:
 
-```
+```text
 http://localhost:8001/docs  # Ingestion API docs
 http://localhost:8002/docs  # Detection API docs
 http://localhost:8003/docs  # Analytics API docs
 ```
 
 **Features:**
+
 - See all endpoints with descriptions
 - Try endpoints directly in browser
 - View request/response schemas
@@ -547,6 +569,7 @@ Write-Host "`nStep 6: Open dashboard at http://localhost:8003/dashboard"
 ## Troubleshooting During Demo
 
 ### Issue: Service not responding
+ 
 ```powershell
 # Check if service is running
 netstat -ano | findstr "8001"
@@ -555,11 +578,13 @@ netstat -ano | findstr "8003"
 ```
 
 ### Issue: Database not initialized
+ 
 ```powershell
 python tools\scripts\init_db.py
 ```
 
 ### Issue: Import errors
+ 
 ```powershell
 # Ensure you're in the right directory
 cd "c:\A Developer's Stuff\ASTRA"
@@ -573,6 +598,7 @@ cd "c:\A Developer's Stuff\ASTRA"
 ## Summary
 
 This guide covered:
+
 1. ✅ Starting all services
 2. ✅ Health checks for verification
 3. ✅ Content ingestion (file & HTTP)
@@ -584,6 +610,7 @@ This guide covered:
 9. ✅ Demo scripts for mentor presentation
 
 **For your mentor verification, recommend using:**
+
 - Swagger UI (`/docs` endpoints) for interactive testing
 - PowerShell demo script for automated walkthrough
 - Web dashboard for visual demonstration
