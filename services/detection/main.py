@@ -13,8 +13,8 @@ from models import DetectionRequest, DetectionResult
 from detector import DetectorRegistry
 
 # Import detectors to register them
-from detectors import zero_shot_detector  # keep import to register zero-shot
-from detectors import simple_detector      # import to register simple
+from detectors import simple_detector      # registers lightweight simple detector
+from detectors import rag_detector         # registers minimal RAG detector
 
 app = FastAPI(title="ASTRA Detection Service", version="0.1.0")
 
@@ -28,9 +28,15 @@ def get_detector():
     global default_detector
     if default_detector is None:
         if DETECTOR_NAME == "zero-shot":
+            # Lazy import to avoid heavy dependency cost unless requested
+            from detectors import zero_shot_detector  # noqa: F401
             default_detector = DetectorRegistry.get_detector("zero-shot", {
                 "model_id": "facebook/bart-large-mnli",
                 "labels": ["AI-generated", "human-written", "suspicious"]
+            })
+        elif DETECTOR_NAME == "rag":
+            default_detector = DetectorRegistry.get_detector("rag", {
+                "top_k": 2
             })
         else:
             default_detector = DetectorRegistry.get_detector("simple", {

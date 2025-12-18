@@ -2,9 +2,9 @@
 # Python 3.11+
 
 # Web Framework
-fastapi==0.119.0
-uvicorn==0.37.0
-pydantic==2.12.0
+fastapi==0.110.0
+uvicorn==0.25.0
+pydantic==2.6.1
 
 # HTTP Client
 requests==2.32.3
@@ -13,9 +13,10 @@ requests==2.32.3
 jinja2==3.1.4
 
 # AI/ML
-transformers==4.57.0
-torch==2.8.0
-sentencepiece==0.2.1
+transformers==4.41.2  # optional (zero-shot detector)
+torch==2.2.0           # optional (zero-shot detector)
+sentencepiece==0.1.99  # optional (zero-shot detector)
+numpy<2                # pin to avoid compiled extension mismatch warnings
 
 # Database (SQLite persistence)
 sqlalchemy==2.0.25

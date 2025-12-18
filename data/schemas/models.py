@@ -23,13 +23,24 @@ class DetectionRequest(BaseModel):
 
 
 class DetectionResult(BaseModel):
-    """Detection response with classification and confidence."""
+    """Detection response with classification and confidence.
+
+    The original field `model_name` triggered a Pydantic protected namespace warning
+    (conflict with `model_`). We keep external compatibility by exposing
+    `detector_model` as the canonical field while aliasing `model_name`.
+    """
     event_id: Optional[str] = None
     label: str = Field(..., description="AI-generated, human, suspicious, etc.")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Model confidence score")
-    model_name: str = Field(..., description="Detector model used")
+    detector_model: str = Field(..., alias="model_name", description="Detector model used")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    model_config = {
+        # Allow alias population; disable protected namespace restriction for this model
+        "populate_by_name": True,
+        "protected_namespaces": (),
+    }
 
 
 class AnalyticsRecord(BaseModel):
@@ -40,3 +51,4 @@ class AnalyticsRecord(BaseModel):
     detection_label: str
     confidence: float
     timestamp: datetime
+    model_config = {"protected_namespaces": ()}

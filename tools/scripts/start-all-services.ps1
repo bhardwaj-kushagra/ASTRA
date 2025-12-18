@@ -1,38 +1,35 @@
 # ASTRA - Start All Services
 # Launches all three services in separate PowerShell windows
 
-Write-Host "Starting ASTRA services..." -ForegroundColor Cyan
+Write-Host "Starting ASTRA services (safe quoting)..." -ForegroundColor Cyan
 
-$rootDir = Get-Location
-$venvActivate = Join-Path $rootDir "venv\Scripts\Activate.ps1"
+$rootDir = (Resolve-Path .).Path
+$pythonExe = "python"  # assumes on PATH; adjust if needed
 
-# Start Ingestion Service
-Write-Host "Starting Ingestion Service (port 8001)..." -ForegroundColor Yellow
-$ingestionDir = Join-Path $rootDir "services\ingestion"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location -Path '$ingestionDir'; & '$venvActivate'; python main.py"
+function Start-AstraService {
+	param(
+		[string]$Name,
+		[int]$Port,
+		[string]$ServiceDir
+	)
+	Write-Host "[OK] Starting $Name Service (port $Port)..." -ForegroundColor Yellow
+	# Use -WorkingDirectory to avoid quoting issues with apostrophes in path
+	Start-Process -FilePath $pythonExe -ArgumentList 'main.py' -WorkingDirectory $ServiceDir -WindowStyle Normal
+	Start-Sleep -Milliseconds 800
+}
 
-Start-Sleep -Seconds 2
+$ingestionDir  = Join-Path $rootDir "services" | Join-Path -ChildPath "ingestion"
+$detectionDir  = Join-Path $rootDir "services" | Join-Path -ChildPath "detection"
+$analyticsDir  = Join-Path $rootDir "services" | Join-Path -ChildPath "risk-analytics"
 
-# Start Detection Service
-Write-Host "Starting Detection Service (port 8002)..." -ForegroundColor Yellow
-$detectionDir = Join-Path $rootDir "services\detection"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location -Path '$detectionDir'; & '$venvActivate'; python main.py"
+Start-AstraService -Name Ingestion -Port 8001 -ServiceDir $ingestionDir
+Start-AstraService -Name Detection -Port 8002 -ServiceDir $detectionDir
+Start-AstraService -Name RiskAnalytics -Port 8003 -ServiceDir $analyticsDir
 
-Start-Sleep -Seconds 2
-
-# Start Risk Analytics Service
-Write-Host "Starting Risk Analytics Service (port 8003)..." -ForegroundColor Yellow
-$analyticsDir = Join-Path $rootDir "services\risk-analytics"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location -Path '$analyticsDir'; & '$venvActivate'; python main.py"
-
-Write-Host ""
-Write-Host "All services started!" -ForegroundColor Green
-Write-Host ""
+Write-Host ""; Write-Host "All services started!" -ForegroundColor Green; Write-Host ""
 Write-Host "Service URLs:" -ForegroundColor Cyan
-Write-Host "  Ingestion:  http://localhost:8001"
-Write-Host "  Detection:  http://localhost:8002"
-Write-Host "  Analytics:  http://localhost:8003"
-Write-Host ""
-Write-Host "Dashboard:  http://localhost:8003/dashboard" -ForegroundColor Green
-Write-Host ""
-Write-Host "Press Ctrl+C in each service window to stop them."
+Write-Host "  Ingestion:  http://127.0.0.1:8001"
+Write-Host "  Detection:  http://127.0.0.1:8002"
+Write-Host "  Analytics:  http://127.0.0.1:8003"
+Write-Host ""; Write-Host "Dashboard:  http://127.0.0.1:8003/dashboard" -ForegroundColor Green
+Write-Host ""; Write-Host "Use tools/scripts/stop-all.ps1 to stop all services." -ForegroundColor Cyan
