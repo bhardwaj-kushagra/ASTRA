@@ -42,9 +42,11 @@ def get_detector():
                 config["model_path"] = model_path
             default_detector = DetectorRegistry.get_detector("zero-shot", config)
         elif DETECTOR_NAME == "rag":
-            default_detector = DetectorRegistry.get_detector("rag", {
-                "top_k": 2
-            })
+            model_path = os.getenv("RAG_MODEL_PATH")
+            config = {"top_k": 1}
+            if model_path:
+                config["model_path"] = model_path
+            default_detector = DetectorRegistry.get_detector("rag", config)
         else:
             default_detector = DetectorRegistry.get_detector("simple", {
                 "threshold_len": 600

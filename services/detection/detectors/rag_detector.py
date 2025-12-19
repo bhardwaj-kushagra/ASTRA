@@ -1,86 +1,111 @@
 """
-RAG-based detector for evaluation: uses a tiny in-memory corpus and cosine similarity
-to retrieve context, then produces a heuristic label and confidence. Designed for
-lightweight demos without external dependencies.
+RAG-based detector using local embeddings (Sentence Transformers).
+Retrieves similar examples from a knowledge base to classify content.
 """
 import sys
 import os
 from typing import List, Dict, Any
-from math import sqrt
+import torch
+
+try:
+    from sentence_transformers import SentenceTransformer, util
+    _has_st = True
+except ImportError:
+    _has_st = False
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'schemas')))
 from models import DetectionRequest, DetectionResult
 from detector import Detector, DetectorRegistry
 
 
-def tokenize(text: str) -> List[str]:
-    return [t for t in text.lower().split() if t.isalpha() or t.isalnum()]
-
-
-def tf_vector(tokens: List[str]) -> Dict[str, float]:
-    counts: Dict[str, int] = {}
-    for t in tokens:
-        counts[t] = counts.get(t, 0) + 1
-    total = sum(counts.values()) or 1
-    return {k: v / total for k, v in counts.items()}
-
-
-def cosine(a: Dict[str, float], b: Dict[str, float]) -> float:
-    keys = set(a.keys()) | set(b.keys())
-    dot = sum(a.get(k, 0.0) * b.get(k, 0.0) for k in keys)
-    na = sqrt(sum(v * v for v in a.values()))
-    nb = sqrt(sum(v * v for v in b.values()))
-    if na == 0 or nb == 0:
-        return 0.0
-    return dot / (na * nb)
-
-
 class RagDetector(Detector):
-    """Minimal RAG detector that retrieves top-k snippets and scores faithfulness."""
+    """
+    RAG detector that uses semantic embeddings to retrieve similar labeled examples.
+    Uses sentence-transformers/all-MiniLM-L6-v2 by default.
+    """
 
     def __init__(self, config: dict):
         super().__init__(config)
-        # In-memory corpus
-        self.docs: List[Dict[str, Any]] = config.get("docs", [
-            {"id": "d1", "text": "AI-generated text often shows patterns like repetition and generic phrasing."},
-            {"id": "d2", "text": "Human-written content varies in style and may include personal anecdotes."},
-            {"id": "d3", "text": "SQLite provides ACID compliance with minimal operational overhead for small systems."},
-        ])
-        self.k = int(config.get("top_k", 2))
+        if not _has_st:
+            raise RuntimeError("sentence-transformers not installed. Run: pip install sentence-transformers")
+
+        # Load model
+        model_path = config.get("model_path") or os.getenv("RAG_MODEL_PATH")
+        model_id = config.get("model_id", "sentence-transformers/all-MiniLM-L6-v2")
+        
+        # If model_path is set, use it; otherwise download/cache model_id
+        load_path = model_path if model_path else model_id
+        self.model = SentenceTransformer(load_path)
+
+        # Knowledge base of labeled examples (Few-Shot RAG)
+        # In a real system, this would come from a vector DB (Chroma/Pinecone)
+        self.knowledge_base = [
+            {"text": "As an AI language model, I cannot provide that information.", "label": "AI-generated"},
+            {"text": "I'm sorry, but I don't have feelings or personal opinions.", "label": "AI-generated"},
+            {"text": "Here is a summary of the text you provided.", "label": "AI-generated"},
+            {"text": "The following is a generated response based on your query.", "label": "AI-generated"},
+            {"text": "I really loved that movie! The acting was superb and I cried at the end.", "label": "human-written"},
+            {"text": "Can you believe what happened yesterday? It was absolutely crazy.", "label": "human-written"},
+            {"text": "The quick brown fox jumps over the lazy dog.", "label": "human-written"},
+            {"text": "I think we should go to the park later.", "label": "human-written"},
+        ]
+        
+        # Pre-compute embeddings for the knowledge base
+        texts = [doc["text"] for doc in self.knowledge_base]
+        self.kb_embeddings = self.model.encode(texts, convert_to_tensor=True)
+        self.k = int(config.get("top_k", 1))
 
     @property
     def model_name(self) -> str:
-        return "rag-minimal"
+        return "rag-embedding-knn"
 
     async def detect(self, request: DetectionRequest) -> DetectionResult:
-        q_tokens = tokenize(request.text)
-        q_vec = tf_vector(q_tokens)
-        scored = []
-        for doc in self.docs:
-            v = tf_vector(tokenize(doc["text"]))
-            s = cosine(q_vec, v)
-            scored.append((s, doc))
-        scored.sort(key=lambda x: x[0], reverse=True)
-        top = scored[: self.k]
-        avg_sim = sum(s for s, _ in top) / (len(top) or 1)
+        """
+        Detect by finding the most semantically similar example in the knowledge base.
+        """
+        # Embed the input text
+        query_embedding = self.model.encode(request.text, convert_to_tensor=True)
 
-        # Simple heuristic: if similarity high and mentions 'ai', label AI-generated, else human
-        lower = request.text.lower()
-        if "ai" in lower and avg_sim >= 0.25:
-            label = "AI-generated"
-            conf = min(0.9, 0.6 + avg_sim)
-        else:
-            label = "human-written"
-            conf = min(0.85, 0.5 + avg_sim)
+        # Compute cosine similarity with all KB entries
+        # cos_sim returns a tensor of shape (1, len(kb))
+        cos_scores = util.cos_sim(query_embedding, self.kb_embeddings)[0]
+
+        # Find top k matches
+        # top_results is a named tuple (values, indices)
+        top_k = min(self.k, len(self.knowledge_base))
+        top_results = torch.topk(cos_scores, k=top_k)
+        
+        top_scores = top_results.values.tolist()
+        top_indices = top_results.indices.tolist()
+
+        # Retrieve the best match
+        best_idx = top_indices[0]
+        best_score = top_scores[0]
+        best_match = self.knowledge_base[best_idx]
+        
+        # Decision logic: Label of the nearest neighbor
+        # Confidence is the similarity score (clamped 0-1)
+        label = best_match["label"]
+        confidence = max(0.0, min(1.0, float(best_score)))
+
+        # Construct metadata for explainability
+        top_docs = []
+        for score, idx in zip(top_scores, top_indices):
+            doc = self.knowledge_base[idx]
+            top_docs.append({
+                "text": doc["text"],
+                "label": doc["label"],
+                "similarity": float(score)
+            })
 
         return DetectionResult(
             label=label,
-            confidence=float(conf),
+            confidence=confidence,
             detector_model=self.model_name,
             metadata={
-                "top_docs": [{"id": d["id"], "text": d["text"], "sim": float(s)} for s, d in top],
-                "avg_similarity": float(avg_sim),
-            },
+                "method": "knn-embedding",
+                "top_docs": top_docs
+            }
         )
 
 

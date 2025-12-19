@@ -55,7 +55,7 @@ From the ASTRA root directory, run the automated setup script:
 **This will:**
 
 - Install required Python packages (fastapi, transformers, sqlalchemy, etc.)
-- Download AI models on first run
+- Download AI models on first run (unless configured for offline use)
 
 #### Step 2: Initialize Database
 
@@ -66,6 +66,33 @@ python tools\scripts\init_db.py
 ```
 
 This creates `data\astra.db` with all necessary tables.
+
+#### Step 3: Offline Model Setup (Optional)
+
+If you need to run ASTRA without an internet connection or want to avoid repeated downloads:
+
+1. **Download the model locally** (requires internet once):
+   ```powershell
+   # For Zero-Shot Detector
+   python tools\scripts\download_zero_shot_model.py
+   
+   # For RAG Detector
+   python tools\scripts\download_rag_model.py
+   ```
+   This saves models to `astra-models/`.
+
+2. **Configure environment variables** before starting services:
+   ```powershell
+   # Zero-Shot
+   $env:DETECTOR_NAME = "zero-shot"
+   $env:ZERO_SHOT_MODEL_PATH = "$PWD\astra-models\facebook-bart-large-mnli"
+   
+   # OR for RAG
+   $env:DETECTOR_NAME = "rag"
+   $env:RAG_MODEL_PATH = "$PWD\astra-models\sentence-transformers-all-MiniLM-L6-v2"
+   ```
+
+3. **Start services** normally. The detector will now load from the local folder and skip network calls.
 
 ### Manual Setup (Alternative)
 
