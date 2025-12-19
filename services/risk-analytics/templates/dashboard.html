@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASTRA Risk Analytics Dashboard</title>
-    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}">
 </head>
 <body>
     <div class="container">
@@ -12,6 +13,31 @@
             <h1>🛡️ ASTRA Risk Analytics Dashboard</h1>
             <p class="subtitle">Adaptive Surveillance Tracking and Recognition Architecture</p>
         </header>
+
+        {% if error %}
+        <p class="error-message">{{ error }}</p>
+        {% endif %}
+
+        <div class="input-grid">
+            <div class="stat-card">
+                <h2>Analyze Typed Text</h2>
+                <form method="post" action="/dashboard/analyze-text">
+                    <textarea name="text" rows="5" placeholder="Paste or type text to analyze..." required></textarea>
+                    <div class="form-actions">
+                        <button type="submit">Analyze Text</button>
+                    </div>
+                </form>
+            </div>
+            <div class="stat-card">
+                <h2>Analyze Uploaded File</h2>
+                <form method="post" action="/dashboard/upload-file" enctype="multipart/form-data">
+                    <input type="file" name="file" accept=".txt,.md,.log,.json,.csv" required>
+                    <div class="form-actions">
+                        <button type="submit">Upload &amp; Analyze</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <div class="stats-grid">
             <div class="stat-card">

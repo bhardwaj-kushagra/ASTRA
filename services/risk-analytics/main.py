@@ -1,11 +1,11 @@
-"""
-Risk analytics service main application.
-"""
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+"""Risk analytics service main application."""
+from fastapi import FastAPI, Request, Response, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from typing import List
+import uuid
+from pathlib import Path
 import sys
 import os
 import requests
@@ -16,13 +16,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from models import AnalyticsRecord, DetectionRequest, DetectionResult, ContentEvent
 from sqlite_store import SQLiteAnalyticsStore
 
+BASE_DIR = Path(__file__).resolve().parent
+
 app = FastAPI(title="ASTRA Risk Analytics Service", version="0.1.0")
+
+# Static files and templates
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Global store instance (SQLite for persistent storage)
 analytics_store = SQLiteAnalyticsStore()
-
-# Templates for simple HTML dashboard
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
 # Configuration for service endpoints
 DETECTION_SERVICE_URL = os.getenv("DETECTION_SERVICE_URL", "http://localhost:8002")
@@ -39,6 +42,12 @@ async def root():
     }
 
 
+@app.get("/favicon.ico")
+async def favicon() -> Response:
+    """Return an empty favicon to avoid 404 noise in logs."""
+    return Response(status_code=204)
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Render analytics dashboard."""
@@ -48,8 +57,90 @@ async def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "stats": stats,
-        "records": recent_records
+        "records": recent_records,
+        "error": None,
     })
+
+
+@app.post("/dashboard/analyze-text", response_class=HTMLResponse)
+async def dashboard_analyze_text(request: Request, text: str = Form(...)):
+    """Analyze ad-hoc text from the dashboard and store result."""
+    try:
+        response = requests.post(
+            f"{DETECTION_SERVICE_URL}/detect",
+            json={"text": text},
+            timeout=30,
+        )
+        response.raise_for_status()
+        result = DetectionResult(**response.json())
+
+        analytics_record = AnalyticsRecord(
+            event_id=result.event_id or f"dash-{uuid.uuid4().hex[:8]}",
+            source="dashboard-text",
+            text_preview=text[:200],
+            detection_label=result.label,
+            confidence=result.confidence,
+            timestamp=result.timestamp,
+        )
+        await analytics_store.add_record(analytics_record)
+
+        return RedirectResponse(url="/dashboard", status_code=303)
+    except Exception as exc:  # pragma: no cover - UI path
+        stats = await analytics_store.get_stats()
+        recent_records = await analytics_store.get_recent(limit=50)
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                "stats": stats,
+                "records": recent_records,
+                "error": str(exc),
+            },
+            status_code=500,
+        )
+
+
+@app.post("/dashboard/upload-file", response_class=HTMLResponse)
+async def dashboard_upload_file(request: Request, file: UploadFile = File(...)):
+    """Analyze an uploaded text file via the dashboard and store result."""
+    try:
+        content_bytes = await file.read()
+        text = content_bytes.decode("utf-8", errors="ignore")
+        if not text.strip():
+            raise ValueError("Uploaded file is empty or not valid text.")
+
+        response = requests.post(
+            f"{DETECTION_SERVICE_URL}/detect",
+            json={"text": text},
+            timeout=30,
+        )
+        response.raise_for_status()
+        result = DetectionResult(**response.json())
+
+        analytics_record = AnalyticsRecord(
+            event_id=result.event_id or f"file-{uuid.uuid4().hex[:8]}",
+            source=f"upload:{file.filename}",
+            text_preview=text[:200],
+            detection_label=result.label,
+            confidence=result.confidence,
+            timestamp=result.timestamp,
+        )
+        await analytics_store.add_record(analytics_record)
+
+        return RedirectResponse(url="/dashboard", status_code=303)
+    except Exception as exc:  # pragma: no cover - UI path
+        stats = await analytics_store.get_stats()
+        recent_records = await analytics_store.get_recent(limit=50)
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                "stats": stats,
+                "records": recent_records,
+                "error": str(exc),
+            },
+            status_code=500,
+        )
 
 
 @app.post("/analyze", response_model=dict)

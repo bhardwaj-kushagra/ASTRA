@@ -1,5 +1,1 @@
-Another test document for ASTRA ingestion testing.
-
-This sample demonstrates how the system handles multiple files from the same directory. Each file will be processed as a separate content event.
-
-Example content: Climate change represents one of the most pressing challenges of our time. Scientific consensus indicates that human activities have contributed significantly to global temperature increases over the past century.
+I finally finished that book you lent me, and honestly, I’m still staring at the wall trying to process that ending. We definitely need to grab coffee this weekend because I have so many thoughts.

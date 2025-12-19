@@ -147,16 +147,29 @@ curl http://localhost:8003
 
 ### 2. Test file ingestion
 ```powershell
-curl -X POST http://localhost:8001/ingest `
-  -H "Content-Type: application/json" `
-  -d '{\"connector_type\":\"file\",\"config\":{\"path\":\"..\\..\\data\\samples\",\"pattern\":\"*.txt\"}}'
+Invoke-RestMethod `
+  -Uri "http://localhost:8001/ingest" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{
+    "connector_type": "file",
+    "config": {
+      "path": "..\\..\\data\\samples",
+      "pattern": "*.txt"
+    }
+  }'
+
 ```
 
 ### 3. Test detection directly
 ```powershell
-curl -X POST http://localhost:8002/detect `
-  -H "Content-Type: application/json" `
-  -d '{\"text\":\"This is a test message that could be AI-generated.\"}'
+Invoke-RestMethod `
+  -Uri "http://localhost:8002/detect" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{
+    "text": "I finally finished that book you lent me, and honestly, Im still staring at the wall trying to process that ending. We definitely need to grab coffee this weekend because I have so many thoughts.."
+  }'
 ```
 
 ### 4. Sync events to analytics
