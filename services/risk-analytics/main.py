@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, Response, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from typing import List
+from typing import List, Optional
 import uuid
 from pathlib import Path
 import sys
@@ -32,6 +32,19 @@ DETECTION_SERVICE_URL = os.getenv("DETECTION_SERVICE_URL", "http://localhost:800
 INGESTION_SERVICE_URL = os.getenv("INGESTION_SERVICE_URL", "http://localhost:8001")
 
 
+def _fetch_detector_info() -> tuple[Optional[str], list[str]]:
+    """Fetch active detector and available options from detection service."""
+    try:
+        resp = requests.get(f"{DETECTION_SERVICE_URL}/detector", timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        active = data.get("active_detector") or data.get("default")
+        available = data.get("available_detectors") or data.get("detectors") or []
+        return active, list(available)
+    except Exception:
+        return None, []
+
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
@@ -53,11 +66,14 @@ async def dashboard(request: Request):
     """Render analytics dashboard."""
     stats = await analytics_store.get_stats()
     recent_records = await analytics_store.get_recent(limit=50)
+    active_detector, available_detectors = _fetch_detector_info()
     
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "stats": stats,
         "records": recent_records,
+        "active_detector": active_detector,
+        "available_detectors": available_detectors,
         "error": None,
     })
 
@@ -88,12 +104,15 @@ async def dashboard_analyze_text(request: Request, text: str = Form(...)):
     except Exception as exc:  # pragma: no cover - UI path
         stats = await analytics_store.get_stats()
         recent_records = await analytics_store.get_recent(limit=50)
+        active_detector, available_detectors = _fetch_detector_info()
         return templates.TemplateResponse(
             "dashboard.html",
             {
                 "request": request,
                 "stats": stats,
                 "records": recent_records,
+                "active_detector": active_detector,
+                "available_detectors": available_detectors,
                 "error": str(exc),
             },
             status_code=500,
@@ -131,13 +150,44 @@ async def dashboard_upload_file(request: Request, file: UploadFile = File(...)):
     except Exception as exc:  # pragma: no cover - UI path
         stats = await analytics_store.get_stats()
         recent_records = await analytics_store.get_recent(limit=50)
+        active_detector, available_detectors = _fetch_detector_info()
         return templates.TemplateResponse(
             "dashboard.html",
             {
                 "request": request,
                 "stats": stats,
                 "records": recent_records,
+                "active_detector": active_detector,
+                "available_detectors": available_detectors,
                 "error": str(exc),
+            },
+            status_code=500,
+        )
+
+
+@app.post("/dashboard/set-detector", response_class=HTMLResponse)
+async def dashboard_set_detector(request: Request, detector_name: str = Form(...)):
+    """Switch the active detector via the dashboard selector."""
+    try:
+        resp = requests.post(
+            f"{DETECTION_SERVICE_URL}/detector/{detector_name}",
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return RedirectResponse(url="/dashboard", status_code=303)
+    except Exception as exc:  # pragma: no cover - UI path
+        stats = await analytics_store.get_stats()
+        recent_records = await analytics_store.get_recent(limit=50)
+        active_detector, available_detectors = _fetch_detector_info()
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                "stats": stats,
+                "records": recent_records,
+                "active_detector": active_detector,
+                "available_detectors": available_detectors,
+                "error": f"Failed to switch detector: {exc}",
             },
             status_code=500,
         )

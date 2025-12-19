@@ -12,6 +12,20 @@
         <header>
             <h1>🛡️ ASTRA Risk Analytics Dashboard</h1>
             <p class="subtitle">Adaptive Surveillance Tracking and Recognition Architecture</p>
+            {% if available_detectors %}
+            <div class="detector-selector">
+                <form method="post" action="/dashboard/set-detector">
+                    <label for="detector_name">Detector:</label>
+                    <select id="detector_name" name="detector_name">
+                        {% for d in available_detectors %}
+                        <option value="{{ d }}" {% if d == active_detector %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Switch</button>
+                </form>
+                <p class="detector-status">Current detector: {{ active_detector or 'unknown' }}</p>
+            </div>
+            {% endif %}
         </header>
 
         {% if error %}
@@ -31,7 +45,8 @@
             <div class="stat-card">
                 <h2>Analyze Uploaded File</h2>
                 <form method="post" action="/dashboard/upload-file" enctype="multipart/form-data">
-                    <input type="file" name="file" accept=".txt,.md,.log,.json,.csv" required>
+                    <label for="file-upload">Select file to analyze:</label>
+                    <input type="file" id="file-upload" name="file" accept=".txt,.md,.log,.json,.csv" required>
                     <div class="form-actions">
                         <button type="submit">Upload &amp; Analyze</button>
                     </div>

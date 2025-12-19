@@ -352,7 +352,7 @@ curl http://localhost:8003/stats
 **Endpoint:** `GET http://localhost:8003/dashboard`
 
 **Open in browser:**
- 
+
 ```text
 http://localhost:8003/dashboard
 ```
@@ -500,7 +500,7 @@ python demo_api.py
    - URL: `http://localhost:8002/detect`
    - Headers: `Content-Type: application/json`
    - Body (raw JSON):
-     
+
      ```json
      {
        "text": "Sample text to analyze"
@@ -569,7 +569,7 @@ Write-Host "`nStep 6: Open dashboard at http://localhost:8003/dashboard"
 ## Troubleshooting During Demo
 
 ### Issue: Service not responding
- 
+
 ```powershell
 # Check if service is running
 netstat -ano | findstr "8001"
@@ -578,13 +578,13 @@ netstat -ano | findstr "8003"
 ```
 
 ### Issue: Database not initialized
- 
+
 ```powershell
 python tools\scripts\init_db.py
 ```
 
 ### Issue: Import errors
- 
+
 ```powershell
 # Ensure you're in the right directory
 cd "c:\A Developer's Stuff\ASTRA"

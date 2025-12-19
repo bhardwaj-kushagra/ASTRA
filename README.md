@@ -5,12 +5,14 @@
 ASTRA is a multi-layered defense platform that detects, attributes, and mitigates hostile information operations powered by large language models (LLMs). The system combines AI-driven analytics, graph intelligence, forensic tooling, and policy enforcement to protect national security partners from malicious narrative campaigns.
 
 ## Vision
+
 - Deliver **high-precision AI-generated content detection** with sub-second response times.
 - Provide **forensic attribution** and cross-border intelligence sharing without compromising privacy.
 - Empower analysts with **real-time risk scoring, dashboards, and simulation tooling** for proactive defense.
 - Institutionalize **Responsible AI and governance** guardrails through automation, transparency, and red-teaming.
 
 ## Core Capability Pillars
+
 1. **Real-Time Detection** – Transformer ensembles, stylometry, and entropy-based detectors for text and multimedia.
 2. **Attribution & Forensics** – Watermark verification, fingerprinting, evidence chain management.
 3. **Graph Intelligence** – GNN-powered propagation analysis, coordination detection, and influence mapping.
@@ -21,7 +23,7 @@ ASTRA is a multi-layered defense platform that detects, attributes, and mitigate
 
 ## Repository Structure
 
-```
+```text
 docs/                     Project knowledge base (architecture, governance, operations, roadmap)
 services/                 Domain services (ingestion, detection, attribution, graph, federation, analytics, red-team)
 platform/                 Infrastructure-as-code and MLOps platform assets
@@ -32,6 +34,7 @@ tools/                    Shared tooling, automation scripts, and developer util
 See `docs/README.md` and the service-specific READMEs for deeper detail.
 
 ## Architecture at a Glance
+
 - **Data Foundation**: Streaming ingestion → feature store → curated lakehouse.
 - **Analytic Engines**: Detection ensembles, graph neural networks, attribution pipelines.
 - **Exchange Fabric**: Federated gateway enforcing privacy, policy, and audit trails.
@@ -41,6 +44,7 @@ See `docs/README.md` and the service-specific READMEs for deeper detail.
 Diagrams and contract details live in `docs/architecture/`.
 
 ## Delivery Roadmap
+
 High-level milestones are tracked in `docs/roadmap.md`. Each phase concludes with:
 - Demo and stakeholder review
 - Security & privacy assessment
@@ -49,18 +53,24 @@ High-level milestones are tracked in `docs/roadmap.md`. Each phase concludes wit
 ## Getting Started (WIP)
 
 ### Quick Setup
+
 1. **Prerequisites**: Python 3.10+, 8GB+ RAM
 2. **Automated setup** (from ASTRA root):
+
    ```powershell
    .\setup.ps1
    ```
+
 3. **Start all services** (choose one):
+
    ```powershell
    .\tools\scripts\start-all-uvicorn.ps1   # separate windows with logs (IPv4)
    # or
    .\tools\scripts\start-with-sqlite.ps1   # python main.py per service
    ```
+
 4. **Test the system**:
+
    - Ingestion: `http://127.0.0.1:8001`
    - Detection: `http://127.0.0.1:8002`
    - Dashboard: `http://127.0.0.1:8003/dashboard`
@@ -68,16 +78,19 @@ High-level milestones are tracked in `docs/roadmap.md`. Each phase concludes wit
 See `QUICKSTART.md` for detailed setup, testing, and troubleshooting instructions.
 
 ## Collaboration & Governance
+
 - Track work via issues with labels per module (`ingestion`, `detection`, etc.).
 - Propose significant changes through Architecture Decision Records (ADRs) in `docs/architecture/adr/`.
 - Maintain Responsible AI, privacy, and federation policies within `docs/governance/`.
 - Document operational runbooks and incident response updates in `docs/operations/`.
 
 ## Contributing
+
 1. Fork or branch from `main` using trunk-based development conventions.
 2. Ensure lint, tests, and security scans pass before opening a pull request.
 3. Request reviews from the relevant module lead and governance rep.
 4. Capture learnings in ADRs, runbooks, or roadmap updates as appropriate.
 
 ## License
+
 TBD – select a license once partner requirements are finalized.

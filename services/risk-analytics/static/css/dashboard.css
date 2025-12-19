@@ -16,6 +16,26 @@ body {
     max-width: 1400px;
     margin: 0 auto;
 }
+.detector-selector {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.detector-selector label {
+    font-weight: 600;
+}
+.detector-selector select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+.detector-status {
+    margin-left: auto;
+    font-size: 0.9em;
+    color: #555;
+}
 .input-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
