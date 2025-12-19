@@ -2,6 +2,7 @@
 HTTP connector: fetches content from HTTP endpoints.
 """
 import uuid
+import hashlib
 from typing import Iterator
 import requests
 import sys
@@ -33,6 +34,15 @@ class HTTPConnector(Connector):
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
                 
+                # Derive a stable source_hash from URL and content
+                hasher = hashlib.sha256()
+                hasher.update(url.encode("utf-8"))
+                hasher.update(response.text.encode("utf-8"))
+                source_hash = hasher.hexdigest()
+
+                # Convention-based actor identifier (e.g., domain or configured label)
+                actor_id = self.config.get("actor_id") or requests.utils.urlparse(url).netloc or "http-source"
+
                 yield ContentEvent(
                     id=str(uuid.uuid4()),
                     source=self.source_name,
@@ -42,7 +52,10 @@ class HTTPConnector(Connector):
                         "url": url,
                         "status_code": response.status_code,
                         "content_length": len(response.text)
-                    }
+                    },
+                    actor_id=actor_id,
+                    source_hash=source_hash,
+                    processing_status="NEW"
                 )
             except Exception as e:
                 print(f"Error fetching {url}: {e}")

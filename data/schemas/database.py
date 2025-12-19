@@ -22,8 +22,11 @@ class ContentEventDB(Base):
     
     id = Column(String(36), primary_key=True)
     source = Column(String(100), nullable=False, index=True)
+    actor_id = Column(String(100), nullable=True, index=True)
+    source_hash = Column(String(128), nullable=True, index=True)
     text = Column(Text, nullable=False)
     metadata_json = Column(Text)  # JSON string for flexible metadata
+    processing_status = Column(String(20), nullable=False, default="NEW", index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     
     def __repr__(self):

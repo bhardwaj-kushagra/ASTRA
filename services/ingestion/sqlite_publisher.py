@@ -34,8 +34,11 @@ class SQLitePublisher:
             db_event = ContentEventDB(
                 id=event.id,
                 source=event.source,
+                actor_id=event.actor_id,
+                source_hash=event.source_hash,
                 text=event.text,
                 metadata_json=json.dumps(event.metadata) if event.metadata else None,
+                processing_status=event.processing_status or "NEW",
                 timestamp=event.timestamp
             )
             
@@ -57,8 +60,11 @@ class SQLitePublisher:
                 db_event = ContentEventDB(
                     id=event.id,
                     source=event.source,
+                    actor_id=event.actor_id,
+                    source_hash=event.source_hash,
                     text=event.text,
                     metadata_json=json.dumps(event.metadata) if event.metadata else None,
+                    processing_status=event.processing_status or "NEW",
                     timestamp=event.timestamp
                 )
                 session.add(db_event)
@@ -84,8 +90,12 @@ class SQLitePublisher:
                 events.append(ContentEvent(
                     id=db_event.id,
                     source=db_event.source,
+                    content_type="text",
                     text=db_event.text,
                     metadata=json.loads(db_event.metadata_json) if db_event.metadata_json else {},
+                    actor_id=db_event.actor_id,
+                    source_hash=db_event.source_hash,
+                    processing_status=db_event.processing_status or "NEW",
                     timestamp=db_event.timestamp
                 ))
             
@@ -111,8 +121,12 @@ class SQLitePublisher:
                 return ContentEvent(
                     id=db_event.id,
                     source=db_event.source,
+                    content_type="text",
                     text=db_event.text,
                     metadata=json.loads(db_event.metadata_json) if db_event.metadata_json else {},
+                    actor_id=db_event.actor_id,
+                    source_hash=db_event.source_hash,
+                    processing_status=db_event.processing_status or "NEW",
                     timestamp=db_event.timestamp
                 )
             return None

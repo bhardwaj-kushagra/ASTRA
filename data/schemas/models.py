@@ -13,6 +13,9 @@ class ContentEvent(BaseModel):
     content_type: str = Field(default="text", description="text, image, video, etc.")
     text: str = Field(..., description="Raw text content")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Connector-specific metadata")
+    actor_id: Optional[str] = Field(default=None, description="Logical actor or account identifier (convention-based string)")
+    source_hash: Optional[str] = Field(default=None, description="Stable hash of source+content for grouping")
+    processing_status: str = Field(default="NEW", description="Processing lifecycle status: NEW, DETECTED, FAILED")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 

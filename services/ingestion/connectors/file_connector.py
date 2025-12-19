@@ -2,6 +2,7 @@
 File connector: reads content from local text files.
 """
 import uuid
+import hashlib
 from pathlib import Path
 from typing import Iterator
 import sys
@@ -34,6 +35,13 @@ class FileConnector(Connector):
             if file_path.is_file():
                 try:
                     text = file_path.read_text(encoding="utf-8")
+                    # Derive a stable source_hash from file path and content
+                    hasher = hashlib.sha256()
+                    hasher.update(str(file_path.absolute()).encode("utf-8"))
+                    hasher.update(text.encode("utf-8"))
+                    source_hash = hasher.hexdigest()
+
+                    actor_id = self.config.get("actor_id") or "file-system"
                     yield ContentEvent(
                         id=str(uuid.uuid4()),
                         source=self.source_name,
@@ -43,7 +51,10 @@ class FileConnector(Connector):
                             "file_name": file_path.name,
                             "file_path": str(file_path.absolute()),
                             "file_size": file_path.stat().st_size
-                        }
+                        },
+                        actor_id=actor_id,
+                        source_hash=source_hash,
+                        processing_status="NEW"
                     )
                 except Exception as e:
                     print(f"Error reading {file_path}: {e}")
