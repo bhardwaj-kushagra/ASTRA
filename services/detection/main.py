@@ -33,10 +33,14 @@ def get_detector():
         if DETECTOR_NAME == "zero-shot":
             # Lazy import to avoid heavy dependency cost unless requested
             from detectors import zero_shot_detector  # noqa: F401
-            default_detector = DetectorRegistry.get_detector("zero-shot", {
+            model_path = os.getenv("ZERO_SHOT_MODEL_PATH")
+            config = {
                 "model_id": "facebook/bart-large-mnli",
-                "labels": ["AI-generated", "human-written", "suspicious"]
-            })
+                "labels": ["AI-generated", "human-written", "suspicious"],
+            }
+            if model_path:
+                config["model_path"] = model_path
+            default_detector = DetectorRegistry.get_detector("zero-shot", config)
         elif DETECTOR_NAME == "rag":
             default_detector = DetectorRegistry.get_detector("rag", {
                 "top_k": 2

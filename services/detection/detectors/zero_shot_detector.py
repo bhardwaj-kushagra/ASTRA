@@ -26,11 +26,23 @@ class ZeroShotDetector(Detector):
         super().__init__(config)
         self.labels = config.get("labels", ["AI-generated", "human-written", "suspicious"])
         self.model_id = config.get("model_id", "facebook/bart-large-mnli")
+        # Optional local model path for fully offline deployments. If provided,
+        # transformers will load only from this directory and will not attempt
+        # any network calls.
+        self.model_path = config.get("model_path") or os.getenv("ZERO_SHOT_MODEL_PATH")
+        # If a local path is configured, default to local_files_only=True to
+        # guarantee no accidental downloads. Can be overridden via config.
+        self.local_files_only = bool(config.get("local_files_only", self.model_path is not None))
         # classifier is Union[callable pipeline, Exception sentinel, None]
         self.classifier = None  # type: ignore[assignment]
         if pipeline is not None:
             try:
-                self.classifier = pipeline("zero-shot-classification", model=self.model_id)
+                model_arg = self.model_path if self.model_path else self.model_id
+                self.classifier = pipeline(
+                    "zero-shot-classification",
+                    model=model_arg,
+                    local_files_only=self.local_files_only,
+                )
             except Exception as e:  # noqa: BLE001
                 # Defer raising until detect is called; allows service to start
                 self.classifier = e  # store exception sentinel

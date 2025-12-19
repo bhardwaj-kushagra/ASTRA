@@ -66,8 +66,10 @@ htmlcov/
 *.bin
 *.pt
 *.pth
+models/
 models/cache/
 transformers_cache/
+astra-models/
 
 # Data (keep structure, ignore large datasets)
 data/datasets/
