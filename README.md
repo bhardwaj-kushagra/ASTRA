@@ -46,6 +46,7 @@ Diagrams and contract details live in `docs/architecture/`.
 ## Delivery Roadmap
 
 High-level milestones are tracked in `docs/roadmap.md`. Each phase concludes with:
+
 - Demo and stakeholder review
 - Security & privacy assessment
 - Updated documentation and runbooks
@@ -74,6 +75,29 @@ High-level milestones are tracked in `docs/roadmap.md`. Each phase concludes wit
    - Ingestion: `http://127.0.0.1:8001`
    - Detection: `http://127.0.0.1:8002`
    - Dashboard: `http://127.0.0.1:8003/dashboard`
+
+### Detection Models (Prototype)
+
+The Detection service exposes three built-in detector modes (selectable at runtime):
+
+- **simple**: lightweight heuristic baseline (no model downloads)
+- **rag**: retrieval-style detector using local sentence-transformer embeddings + kNN over a small labeled knowledge base
+- **zero-shot**: Hugging Face Transformers zero-shot classifier (default model id: `facebook/bart-large-mnli`)
+
+Switch detectors in either of these ways:
+
+- **From the dashboard**: use the detector dropdown at `http://127.0.0.1:8003/dashboard`
+- **Via API**: `POST http://127.0.0.1:8002/detector/{name}` where `{name}` is `simple`, `rag`, or `zero-shot`
+- **Via env var**: set `DETECTOR_NAME` before starting the detection service
+
+### Offline / Local Model Setup
+
+For air-gapped or offline runs, you can pre-download models into `astra-models/` (ignored by git) and point the services at the local folders:
+
+- Zero-shot: run `python tools/scripts/download_zero_shot_model.py` and set `ZERO_SHOT_MODEL_PATH`
+- RAG: run `python tools/scripts/download_rag_model.py` and set `RAG_MODEL_PATH`
+
+See `QUICKSTART.md` for the exact PowerShell commands.
 
 See `QUICKSTART.md` for detailed setup, testing, and troubleshooting instructions.
 

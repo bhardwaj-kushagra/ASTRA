@@ -5,28 +5,35 @@ This document explains how to extend the ASTRA prototype with new capabilities w
 ## Architecture Patterns
 
 ### 1. Plugin Architecture
+
 All services use a **registry pattern** for extensibility:
+
 - **Ingestion**: `ConnectorRegistry` for new data sources
 - **Detection**: `DetectorRegistry` for new models
 - **Analytics**: Future `VisualizationRegistry` for dashboard widgets
 
 ### 2. Service Communication
+
 Current prototype uses **REST APIs** for synchronous communication:
-```
+
+```text
 Ingestion → Analytics → Detection (pull model)
 ```
 
 For production scale, migrate to **event-driven architecture**:
-```
+
+```text
 Ingestion → Message Queue → Detection → Analytics
-                ↓
-         Graph Intelligence
-         Attribution
-         Federation
+          ↓
+      Graph Intelligence
+      Attribution
+      Federation
 ```
 
 ### 3. Shared Schemas
+
 All data models live in `data/schemas/models.py` using **Pydantic**:
+
 - `ContentEvent` - normalized ingestion output
 - `DetectionRequest` / `DetectionResult` - detection I/O
 - `AnalyticsRecord` - aggregated results
@@ -38,6 +45,7 @@ Extend schemas carefully to maintain backward compatibility.
 ## Adding a New Connector
 
 ### Step 1: Create connector class
+
 File: `services/ingestion/connectors/twitter_connector.py`
 
 ```python
@@ -74,12 +82,14 @@ ConnectorRegistry.register("twitter", TwitterConnector)
 ```
 
 ### Step 2: Import in main.py
+
 ```python
 # services/ingestion/main.py
 from connectors import file_connector, http_connector, twitter_connector
 ```
 
 ### Step 3: Use it
+
 ```bash
 curl -X POST http://localhost:8001/ingest \
   -H "Content-Type: application/json" \
@@ -91,6 +101,7 @@ curl -X POST http://localhost:8001/ingest \
 ## Adding a New Detector
 
 ### Step 1: Create detector class
+
 File: `services/detection/detectors/roberta_detector.py`
 
 ```python
@@ -123,13 +134,26 @@ class RoBERTaDetector(Detector):
         return DetectionResult(
             label=label,
             confidence=max(ai_prob, 1 - ai_prob),
-            model_name=self.model_name
+            detector_model=self.model_name
         )
 
 DetectorRegistry.register("roberta", RoBERTaDetector)
 ```
 
+### Notes: Local / Offline Models
+
+Built-in detectors support local model folders for offline deployments:
+
+- **Zero-shot** uses `ZERO_SHOT_MODEL_PATH` (or `config["model_path"]`) to load a Hugging Face model from disk.
+- **RAG (embedding)** uses `RAG_MODEL_PATH` (or `config["model_path"]`) to load a Sentence Transformer model from disk.
+
+You can follow the same pattern in custom detectors:
+
+- Prefer `config.get("model_path") or os.getenv("YOUR_MODEL_PATH")`
+- Use local-only loading flags where available (e.g., `local_files_only=True` for Hugging Face)
+
 ### Step 2: Import and configure
+
 ```python
 # services/detection/main.py
 from detectors import zero_shot_detector, roberta_detector
@@ -147,7 +171,8 @@ default_detector = DetectorRegistry.get_detector("roberta", {
 Example: **Graph Intelligence Service**
 
 ### Step 1: Create service directory
-```
+
+```text
 services/graph-intelligence/
 ├── main.py
 ├── requirements.txt
@@ -157,6 +182,7 @@ services/graph-intelligence/
 ```
 
 ### Step 2: Define interface contracts
+
 ```python
 # graph_builder.py
 from models import ContentEvent, DetectionResult
@@ -176,6 +202,7 @@ class GraphBuilder:
 ```
 
 ### Step 3: Expose REST API
+
 ```python
 # main.py
 from fastapi import FastAPI
@@ -188,6 +215,7 @@ async def analyze_propagation(events: List[ContentEvent]):
 ```
 
 ### Step 4: Wire into analytics
+
 ```python
 # services/risk-analytics/main.py
 GRAPH_SERVICE_URL = "http://localhost:8004"
@@ -203,46 +231,53 @@ async def get_graph_insights():
 ## Migration to Message Queue
 
 ### Current (REST-based)
-```
+
+```text
 Analytics calls Detection → Detection returns result
 ```
 
 ### Future (Event-driven)
-```
+
+```text
 Ingestion → Kafka topic "content-events"
-                ↓
-         Detection subscribes
-                ↓
-         Publishes to "detection-results"
-                ↓
-         Analytics subscribes
+          ↓
+      Detection subscribes
+          ↓
+      Publishes to "detection-results"
+          ↓
+      Analytics subscribes
 ```
 
 ### Implementation sketch
+
 1. Install Redis or Kafka
-2. Replace `InMemoryPublisher` with `KafkaPublisher`:
-   ```python
-   class KafkaPublisher(EventPublisher):
-       def __init__(self, topic: str):
-           self.producer = KafkaProducer(...)
-           self.topic = topic
-       
-       async def publish(self, event: ContentEvent):
-           self.producer.send(self.topic, value=event.json())
-   ```
-3. Add consumers in each service:
-   ```python
-   consumer = KafkaConsumer("content-events")
-   for message in consumer:
-       event = ContentEvent(**json.loads(message.value))
-       # Process event...
-   ```
+1. Replace `InMemoryPublisher` with `KafkaPublisher`:
+
+```python
+class KafkaPublisher(EventPublisher):
+    def __init__(self, topic: str):
+        self.producer = KafkaProducer(...)
+        self.topic = topic
+    
+    async def publish(self, event: ContentEvent):
+        self.producer.send(self.topic, value=event.json())
+```
+
+1. Add consumers in each service:
+
+```python
+consumer = KafkaConsumer("content-events")
+for message in consumer:
+    event = ContentEvent(**json.loads(message.value))
+    # Process event...
+```
 
 ---
 
 ## Data Schema Evolution
 
 ### Adding a new field
+
 ```python
 # data/schemas/models.py
 class ContentEvent(BaseModel):
@@ -255,7 +290,9 @@ class ContentEvent(BaseModel):
 ```
 
 ### Versioning schemas
+
 For breaking changes, create versioned models:
+
 ```python
 class ContentEventV2(BaseModel):
     # New schema
@@ -273,6 +310,7 @@ async def ingest(event: Union[ContentEvent, ContentEventV2]):
 ## Deployment Patterns
 
 ### Containerization
+
 ```dockerfile
 # services/detection/Dockerfile
 FROM python:3.10-slim
@@ -284,6 +322,7 @@ CMD ["python", "main.py"]
 ```
 
 ### Docker Compose (local dev)
+
 ```yaml
 version: '3.8'
 services:
@@ -302,6 +341,7 @@ services:
 ```
 
 ### Kubernetes (production)
+
 - Deploy each service as a `Deployment`
 - Expose via `Service` objects
 - Use `ConfigMap` for configuration
@@ -313,6 +353,7 @@ services:
 ## Testing Strategy
 
 ### Unit Tests
+
 ```python
 # services/detection/test_detector.py
 import pytest
@@ -326,9 +367,11 @@ async def test_zero_shot_detector():
 ```
 
 ### Integration Tests
+
 See `tools/scripts/test_integration.py` for end-to-end examples.
 
 ### Load Testing
+
 ```bash
 # Using Apache Bench
 ab -n 1000 -c 10 http://localhost:8002/detect
@@ -339,6 +382,7 @@ ab -n 1000 -c 10 http://localhost:8002/detect
 ## Monitoring & Observability
 
 ### Add metrics
+
 ```python
 from prometheus_client import Counter, Histogram
 
@@ -353,6 +397,7 @@ async def detect(request: DetectionRequest):
 ```
 
 ### Centralized logging
+
 ```python
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')

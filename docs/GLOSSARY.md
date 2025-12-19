@@ -85,14 +85,15 @@ This glossary collects precise, practitioner‑oriented definitions for terms an
 
 - What: A classifier (e.g., `facebook/bart-large-mnli`) that assigns labels without task‑specific training by mapping labels to natural language hypotheses.
 - Why: Flexible; decent accuracy across domains using transformers.
-- Ops notes: Heavy dependencies (`transformers`, `torch`), model downloads on first run; set long timeouts; cache models.
+- Ops notes: Heavy dependencies (`transformers`, `torch`). Models download on first run unless you pre-download and point the service at a local folder (e.g., `ZERO_SHOT_MODEL_PATH`) for fully offline inference.
 - Pitfalls: Cold‑start latency, NumPy/torch wheel mismatches, large memory footprint.
 
 ## RAG (Retrieval‑Augmented Generation)
 
 - What: Pipeline that retrieves relevant documents and augments generation/classification using the retrieved context.
 - Why: Improves grounding and explainability; supports evidence‑based decisions.
-- Ops notes: Needs retriever (BM25/FAISS), chunking, prompt/design; measure retrieval quality (precision/recall) and answer faithfulness.
+- Prototype note: In this repo, the "RAG" detector is implemented as embedding retrieval using Sentence Transformers + kNN over a small labeled knowledge base (no LLM generation step).
+- Ops notes: Needs retriever (BM25/FAISS/vector DB), chunking, prompt/design; measure retrieval quality (precision/recall) and answer faithfulness. For offline runs, pre-download the embedding model and set `RAG_MODEL_PATH`.
 - Pitfalls: Poor chunking/retrieval harms final answers; evaluation must separate retrieval vs generation errors.
 
 ## RAGAS (RAG Assessment)

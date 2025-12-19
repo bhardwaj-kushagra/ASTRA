@@ -82,9 +82,9 @@ Invoke-WebRequest -Uri "http://localhost:8003/sync-from-ingestion" -Method POST
 
 ✅ **Detection Service**
 
-- Zero-shot transformer classifier (BART)
-- 3-label classification: AI-generated, human-written, suspicious
-- Confidence scoring
+- Pluggable detectors: `simple`, `rag`, `zero-shot`
+- Runtime detector switching via `POST /detector/{name}`
+- Optional offline/local models via `ZERO_SHOT_MODEL_PATH` and `RAG_MODEL_PATH`
 
 ✅ **Analytics Dashboard**
 
@@ -92,6 +92,8 @@ Invoke-WebRequest -Uri "http://localhost:8003/sync-from-ingestion" -Method POST
 - Detection breakdown visualization
 - Recent events table
 - Confidence color coding
+- Direct analysis: typed text + file upload
+- Detector selector (switches detection service between `simple`, `rag`, `zero-shot`)
 
 ---
 
@@ -152,8 +154,11 @@ Sample Files → Ingestion Service (8001)
 
 **Detection too slow?**
 
-- First run downloads ~1.5GB model (one-time)
-- Subsequent runs use cached model
+- First run may download models (one-time) depending on selected detector.
+- For offline/air-gapped setups, pre-download models:
+  - `python tools/scripts/download_zero_shot_model.py`
+  - `python tools/scripts/download_rag_model.py`
+  Then set `ZERO_SHOT_MODEL_PATH` / `RAG_MODEL_PATH` and run with `DETECTOR_NAME`.
 
 ---
 

@@ -117,3 +117,6 @@ credentials/
 
 # Build artifacts
 *.whl
+
+# Local AI assistant config (keep private)
+.github/copilot-instructions.md

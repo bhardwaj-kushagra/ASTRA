@@ -220,8 +220,30 @@ curl http://localhost:8002/models
 ```json
 {
   "detectors": ["simple", "rag", "zero-shot"],
-  "default": "zero-shot"
+  "active_detector": "simple",
+  "default": "simple"
 }
+```
+
+#### Test 4: Switch the Active Detector (Runtime)
+
+You can switch detectors without restarting the service:
+
+```powershell
+# Switch to zero-shot
+curl -X POST http://localhost:8002/detector/zero-shot
+
+# Switch to RAG
+curl -X POST http://localhost:8002/detector/rag
+
+# Switch back to simple
+curl -X POST http://localhost:8002/detector/simple
+```
+
+You can also query the current detector:
+
+```powershell
+curl http://localhost:8002/detector
 ```
 
 ---
@@ -253,6 +275,20 @@ curl -X POST http://localhost:8003/analyze `
 ```
 
 ---
+
+### Step 5A (UI): Demonstrate Dashboard Direct Inputs
+
+Open the dashboard:
+
+- <http://localhost:8003/dashboard>
+
+From the dashboard you can demonstrate:
+
+- **Analyze Typed Text** (posts to `/dashboard/analyze-text`)
+- **Analyze Uploaded File** (posts to `/dashboard/upload-file`)
+- **Detector selector** (posts to `/dashboard/set-detector`, switching the detection service between `simple`, `rag`, `zero-shot`)
+
+This is useful for demos because it requires no curl/Postman setup beyond starting the services.
 
 ### Step 6: Sync Events from Ingestion to Analytics
 

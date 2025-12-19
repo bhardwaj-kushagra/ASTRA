@@ -1,25 +1,42 @@
 # Detection Service
 
-Real-time classification and scoring of suspected AI-generated or malicious narratives using transformer-based models.
+Real-time classification and scoring of suspected AI-generated or malicious narratives.
 
-## Responsibilities (MVP)
-- Host pre-trained or fine-tuned transformer model (RoBERTa, DistilBERT, or zero-shot classifier).
-- Expose REST API for text classification with confidence scores.
-- Extensible detector registry for plugging in additional models.
+This service exposes a stable `/detect` contract while allowing the active detector implementation to be switched at runtime.
+
+## Built-in Detectors
+
+ASTRA ships with three detector modes:
+
+- `simple` — lightweight heuristic baseline (no ML dependencies; always offline)
+- `rag` — embedding retrieval + kNN over a small labeled knowledge base (Sentence Transformers)
+- `zero-shot` — Hugging Face Transformers zero-shot classifier (default model id: `facebook/bart-large-mnli`)
+
+## API
+
+- `GET /` — health + `available_detectors`
+- `POST /detect` — analyze `{ "text": "..." }` and return `DetectionResult`
+- `GET /models` — list registered detectors
+- `GET /detector` — show current active detector + available detectors
+- `POST /detector/{name}` — switch active detector (`simple`, `rag`, `zero-shot`)
+
+## Configuration
+
+Environment variables:
+
+- `DETECTOR_NAME` — start-up detector selection (`simple` | `rag` | `zero-shot`)
+- `ZERO_SHOT_MODEL_PATH` — optional local folder for the zero-shot model (fully offline)
+- `RAG_MODEL_PATH` — optional local folder for the Sentence Transformer embedding model (fully offline)
+
+Offline model download helpers:
+
+- `python tools/scripts/download_zero_shot_model.py`
+- `python tools/scripts/download_rag_model.py`
 
 ## Tech Stack
-- Python 3.10+, FastAPI
-- Hugging Face Transformers
-- Pydantic for request/response validation
-- Optional: ONNX runtime for inference optimization
 
-## Future Enhancements
-- Ensemble orchestration combining multiple detectors.
-- Stylometric and entropy-based feature extraction.
-- Explainability hooks (SHAP/LIME) for analyst review.
-- Model drift detection and continuous retraining pipelines.
-
-## Next Steps
-1. Select baseline model and evaluation dataset.
-2. Implement REST endpoint with health check and inference routes.
-3. Add logging and metrics instrumentation.
+- Python + FastAPI
+- Detector registry pattern (`DetectorRegistry`) for extensibility
+- Optional ML deps:
+  - `transformers` + `torch` for `zero-shot`
+  - `sentence-transformers` for `rag`

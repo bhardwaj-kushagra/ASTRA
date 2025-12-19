@@ -38,7 +38,7 @@ This is a minimal viable prototype of ASTRA demonstrating the core detection pip
 
 - Python 3.10 or higher
 - 8GB+ RAM (for transformer models)
-- Internet connection (first run downloads models)
+- Internet connection (only required the first time you download optional models; can run fully offline after local setup)
 
 ## Installation
 
@@ -72,27 +72,38 @@ This creates `data\astra.db` with all necessary tables.
 If you need to run ASTRA without an internet connection or want to avoid repeated downloads:
 
 1. **Download the model locally** (requires internet once):
-   ```powershell
-   # For Zero-Shot Detector
-   python tools\scripts\download_zero_shot_model.py
-   
-   # For RAG Detector
-   python tools\scripts\download_rag_model.py
-   ```
-   This saves models to `astra-models/`.
 
-2. **Configure environment variables** before starting services:
-   ```powershell
-   # Zero-Shot
-   $env:DETECTOR_NAME = "zero-shot"
-   $env:ZERO_SHOT_MODEL_PATH = "$PWD\astra-models\facebook-bart-large-mnli"
+  ```powershell
+  # For Zero-Shot Detector
+  python tools\scripts\download_zero_shot_model.py
    
-   # OR for RAG
-   $env:DETECTOR_NAME = "rag"
-   $env:RAG_MODEL_PATH = "$PWD\astra-models\sentence-transformers-all-MiniLM-L6-v2"
-   ```
+  # For RAG Detector
+  python tools\scripts\download_rag_model.py
+  ```
 
-3. **Start services** normally. The detector will now load from the local folder and skip network calls.
+  This saves models to `astra-models/`.
+
+1. **Configure environment variables** before starting services:
+
+  ```powershell
+  # Zero-Shot
+  $env:DETECTOR_NAME = "zero-shot"
+  $env:ZERO_SHOT_MODEL_PATH = "$PWD\astra-models\facebook-bart-large-mnli"
+   
+  # OR for RAG
+  $env:DETECTOR_NAME = "rag"
+  $env:RAG_MODEL_PATH = "$PWD\astra-models\sentence-transformers-all-MiniLM-L6-v2"
+  ```
+
+1. **Start services** normally. The detector will now load from the local folder and skip network calls.
+
+#### Step 4: Choose Detector (Optional)
+
+The Detection service supports three detector modes: `simple`, `rag`, and `zero-shot`.
+
+- **From the dashboard**: open <http://localhost:8003/dashboard> and use the detector dropdown.
+- **Via API**: `POST http://localhost:8002/detector/{name}`
+- **Via env var**: set `DETECTOR_NAME` before starting the detection service.
 
 ### Manual Setup (Alternative)
 
@@ -216,6 +227,12 @@ curl -X POST http://localhost:8003/sync-from-ingestion
 
 Open browser to: <http://localhost:8003/dashboard>
 
+The dashboard supports:
+
+- **Analyze Typed Text**: paste text and click **Analyze Text**
+- **Analyze Uploaded File**: upload a `.txt`/`.md`/`.log`/`.json`/`.csv` file and click **Upload & Analyze**
+- **Detector selection**: switch between `simple`, `rag`, and `zero-shot` using the dropdown
+
 ### 6. Run integration tests
 
 ```powershell
@@ -225,7 +242,6 @@ python tools\scripts\test_integration.py
 ## API Endpoints
 
 ### Ingestion Service (8001)
-
 
 - `GET /` - Health check
 - `POST /ingest` - Trigger ingestion with connector config
