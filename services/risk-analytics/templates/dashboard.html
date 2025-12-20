@@ -80,6 +80,14 @@
         </div>
         {% endif %}
 
+        <div class="label-breakdown" id="cooccurrence-panel">
+            <h2>Co-occurrence Graph (actor_id ↔ source_hash)</h2>
+            <p class="subtitle" id="cooccurrence-status">Loading graph…</p>
+            <div class="graph-container">
+                <svg id="cooccurrence-graph" role="img" aria-label="Actor/source_hash co-occurrence graph"></svg>
+            </div>
+        </div>
+
         <div class="records-table">
             <h2>Recent Detections (Last 50)</h2>
             {% if records %}
@@ -130,5 +138,201 @@
             {% endif %}
         </div>
     </div>
+
+    <script>
+        (function () {
+            function svgEl(tag) {
+                return document.createElementNS('http://www.w3.org/2000/svg', tag);
+            }
+
+            function buildAdjacency(edges) {
+                var adj = new Map();
+                for (var i = 0; i < edges.length; i++) {
+                    var e = edges[i];
+                    if (!adj.has(e.source)) adj.set(e.source, []);
+                    if (!adj.has(e.target)) adj.set(e.target, []);
+                    adj.get(e.source).push(e.target);
+                    adj.get(e.target).push(e.source);
+                }
+                return adj;
+            }
+
+            function connectedComponents(nodeIds, adjacency) {
+                var seen = new Set();
+                var comps = [];
+
+                for (var i = 0; i < nodeIds.length; i++) {
+                    var start = nodeIds[i];
+                    if (seen.has(start)) continue;
+                    var stack = [start];
+                    var comp = [];
+                    seen.add(start);
+                    while (stack.length) {
+                        var cur = stack.pop();
+                        comp.push(cur);
+                        var nbrs = adjacency.get(cur) || [];
+                        for (var j = 0; j < nbrs.length; j++) {
+                            var n = nbrs[j];
+                            if (!seen.has(n)) {
+                                seen.add(n);
+                                stack.push(n);
+                            }
+                        }
+                    }
+                    comps.push(comp);
+                }
+                comps.sort(function (a, b) { return b.length - a.length; });
+                return comps;
+            }
+
+            function clearSvg(svg) {
+                while (svg.firstChild) svg.removeChild(svg.firstChild);
+            }
+
+            function renderGraph(svg, data) {
+                clearSvg(svg);
+
+                var nodes = data.nodes || [];
+                var edges = data.edges || [];
+                if (!nodes.length || !edges.length) {
+                    return { rendered: false };
+                }
+
+                var width = svg.clientWidth || 1200;
+                var height = 420;
+                svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+
+                var nodeById = new Map();
+                for (var i = 0; i < nodes.length; i++) {
+                    nodeById.set(nodes[i].id, nodes[i]);
+                }
+
+                var adjacency = buildAdjacency(edges);
+                var nodeIds = nodes.map(function (n) { return n.id; });
+                var comps = connectedComponents(nodeIds, adjacency);
+
+                // Layout: each connected component becomes a "cluster" block.
+                // Actors on left, hashes on right.
+                var paddingX = 24;
+                var paddingY = 18;
+                var leftX = paddingX + 16;
+                var rightX = width - paddingX - 16;
+                var y = 24;
+
+                var positions = new Map();
+
+                for (var c = 0; c < comps.length; c++) {
+                    var compIds = comps[c];
+
+                    // Split by type.
+                    var actors = [];
+                    var hashes = [];
+                    for (var k = 0; k < compIds.length; k++) {
+                        var n = nodeById.get(compIds[k]);
+                        if (!n) continue;
+                        if (n.type === 'actor') actors.push(n);
+                        else hashes.push(n);
+                    }
+
+                    if (!actors.length && !hashes.length) continue;
+
+                    var rows = Math.max(actors.length, hashes.length);
+                    var available = Math.max(60, height - y - 24);
+                    var rowGap = Math.max(14, Math.min(26, Math.floor(available / Math.max(1, rows))));
+                    var compHeight = Math.max(48, rows * rowGap + paddingY);
+
+                    for (var a = 0; a < actors.length; a++) {
+                        positions.set(actors[a].id, { x: leftX, y: y + paddingY + a * rowGap });
+                    }
+                    for (var h = 0; h < hashes.length; h++) {
+                        positions.set(hashes[h].id, { x: rightX, y: y + paddingY + h * rowGap });
+                    }
+
+                    // Cluster outline (subtle).
+                    var box = svgEl('rect');
+                    box.setAttribute('x', paddingX);
+                    box.setAttribute('y', y);
+                    box.setAttribute('width', width - paddingX * 2);
+                    box.setAttribute('height', Math.min(compHeight, height - y - 8));
+                    box.setAttribute('rx', '8');
+                    box.setAttribute('class', 'graph-cluster');
+                    svg.appendChild(box);
+
+                    y += compHeight + 12;
+                    if (y > height - 36) break;
+                }
+
+                // Draw edges first.
+                var maxW = 1;
+                for (var ei = 0; ei < edges.length; ei++) {
+                    if (edges[ei].weight > maxW) maxW = edges[ei].weight;
+                }
+                for (var e = 0; e < edges.length; e++) {
+                    var edge = edges[e];
+                    var p1 = positions.get(edge.source);
+                    var p2 = positions.get(edge.target);
+                    if (!p1 || !p2) continue;
+                    var line = svgEl('line');
+                    line.setAttribute('x1', p1.x);
+                    line.setAttribute('y1', p1.y);
+                    line.setAttribute('x2', p2.x);
+                    line.setAttribute('y2', p2.y);
+                    line.setAttribute('class', 'graph-edge');
+                    var w = 1 + Math.round(3 * (edge.weight / maxW));
+                    line.setAttribute('stroke-width', String(w));
+                    svg.appendChild(line);
+                }
+
+                // Then nodes.
+                for (var ni = 0; ni < nodes.length; ni++) {
+                    var node = nodes[ni];
+                    var pos = positions.get(node.id);
+                    if (!pos) continue;
+
+                    var g = svgEl('g');
+
+                    var circle = svgEl('circle');
+                    circle.setAttribute('cx', pos.x);
+                    circle.setAttribute('cy', pos.y);
+                    circle.setAttribute('r', '7');
+                    circle.setAttribute('class', node.type === 'actor' ? 'graph-node graph-node-actor' : 'graph-node graph-node-hash');
+                    g.appendChild(circle);
+
+                    var text = svgEl('text');
+                    text.setAttribute('x', node.type === 'actor' ? (pos.x + 12) : (pos.x - 12));
+                    text.setAttribute('y', pos.y + 4);
+                    text.setAttribute('text-anchor', node.type === 'actor' ? 'start' : 'end');
+                    text.setAttribute('class', 'graph-label');
+                    text.textContent = node.label;
+                    g.appendChild(text);
+
+                    svg.appendChild(g);
+                }
+
+                return { rendered: true };
+            }
+
+            var statusEl = document.getElementById('cooccurrence-status');
+            var svg = document.getElementById('cooccurrence-graph');
+            if (!statusEl || !svg) return;
+
+            fetch('/graph/cooccurrence', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(function (data) {
+                    var result = renderGraph(svg, data);
+                    if (!result.rendered) {
+                        statusEl.textContent = 'No graph data yet (need events with actor_id + source_hash).';
+                    } else {
+                        statusEl.textContent = 'Clusters are connected components from co-occurrence counts.';
+                    }
+                })
+                .catch(function (err) {
+                    statusEl.textContent = 'Failed to load graph: ' + err.message;
+                });
+        })();
+    </script>
 </body>
 </html>

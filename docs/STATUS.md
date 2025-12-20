@@ -15,6 +15,12 @@
 - 📊 **3 Tables:** content_events, detection_results, analytics_records
 - 💾 **Location:** `C:\A Developer's Stuff\ASTRA\data\astra.db`
 
+### Processing Workflow
+
+- ✅ **Event lifecycle tracking** via `processing_status`: `NEW` → `DETECTED` or `FAILED`
+- ✅ **Async sync**: Risk Analytics processes only `NEW` events and updates `processing_status` directly in the shared SQLite DB
+- ✅ **Attribution-ready fields**: `actor_id` (convention-based string) and `source_hash` (stable content hash)
+
 ---
 
 ## Quick Test Results

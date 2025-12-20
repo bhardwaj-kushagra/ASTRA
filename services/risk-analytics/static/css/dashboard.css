@@ -228,3 +228,36 @@ tr:hover {
 .bar-width-0 { width: 0%; }
 .bar-width-100 { width: 100%; }
 /* dynamic widths will be set by inline style replacement in template via style attributes removed */
+
+.graph-container {
+    margin-top: 12px;
+}
+
+#cooccurrence-graph {
+    width: 100%;
+    height: 420px;
+    display: block;
+}
+
+.graph-cluster {
+    fill: transparent;
+    stroke: rgba(0, 0, 0, 0.08);
+    stroke-width: 1;
+}
+
+.graph-edge {
+    stroke: rgba(102, 126, 234, 0.25);
+}
+
+.graph-node-actor {
+    fill: #667eea;
+}
+
+.graph-node-hash {
+    fill: #764ba2;
+}
+
+.graph-label {
+    font-size: 12px;
+    fill: #333;
+}

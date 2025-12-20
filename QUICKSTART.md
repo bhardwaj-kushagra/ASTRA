@@ -195,14 +195,7 @@ Invoke-RestMethod `
   -Uri "http://localhost:8001/ingest" `
   -Method POST `
   -ContentType "application/json" `
-  -Body '{
-    "connector_type": "file",
-    "config": {
-      "path": "..\\..\\data\\samples",
-      "pattern": "*.txt"
-    }
-  }'
-
+  -Body ('{"connector_type":"file","config":{"path":"' + (Resolve-Path .\data\samples).Path + '","pattern":"*.txt"}}')
 ```
 
 ### 3. Test detection directly
@@ -218,6 +211,8 @@ Invoke-RestMethod `
 ```
 
 ### 4. Sync events to analytics
+
+Trigger Risk Analytics to pull NEW events from Ingestion, run detection concurrently, and update each event's `processing_status` to `DETECTED` or `FAILED`.
 
 ```powershell
 curl -X POST http://localhost:8003/sync-from-ingestion

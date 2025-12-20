@@ -142,13 +142,18 @@ curl "http://localhost:8001/events?limit=5"
 [
   {
     "id": "evt_123",
-    "content": "Sample text content...",
-    "source": "file://data/samples/test.txt",
-    "timestamp": "2024-01-15T10:30:00Z",
+    "source": "file",
+    "content_type": "text",
+    "text": "Sample text content...",
     "metadata": {
-      "connector": "file",
-      "filename": "test.txt"
-    }
+      "file_name": "test.txt",
+      "file_path": "C:\\...\\data\\samples\\test.txt",
+      "file_size": 123
+    },
+    "actor_id": "file-system",
+    "source_hash": "<sha256>",
+    "processing_status": "NEW",
+    "timestamp": "2024-01-15T10:30:00Z"
   }
 ]
 ```

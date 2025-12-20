@@ -8,13 +8,17 @@ import uuid
 from pathlib import Path
 import sys
 import os
+import asyncio
 import requests
+import httpx
 
-# Setup path for shared schemas
+# Setup path for shared schemas and database models
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'schemas')))
 
 from models import AnalyticsRecord, DetectionRequest, DetectionResult, ContentEvent
+from database import DatabaseManager, ContentEventDB
 from sqlite_store import SQLiteAnalyticsStore
+from cooccurrence_graph import build_actor_sourcehash_graph
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -26,6 +30,9 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Global store instance (SQLite for persistent storage)
 analytics_store = SQLiteAnalyticsStore()
+
+# Shared database manager for direct status updates
+db_manager = DatabaseManager()
 
 # Configuration for service endpoints
 DETECTION_SERVICE_URL = os.getenv("DETECTION_SERVICE_URL", "http://localhost:8002")
@@ -249,53 +256,106 @@ async def get_stats():
     return await analytics_store.get_stats()
 
 
+@app.get("/graph/cooccurrence")
+async def get_cooccurrence_graph():
+    """Return a co-occurrence graph over actor_id and source_hash.
+
+    This uses direct DB reads from the shared SQLite database.
+    """
+    session = db_manager.get_session()
+    try:
+        return build_actor_sourcehash_graph(
+            session=session,
+            ContentEventDB=ContentEventDB,
+        )
+    finally:
+        session.close()
+
+
 @app.post("/sync-from-ingestion")
 async def sync_from_ingestion():
     """
-    Pull events from ingestion service and run them through detection.
-    
-    Returns:
-        Summary of sync operation
+    Pull NEW events from ingestion and run them through detection asynchronously.
+    Updates processing_status in the shared DB directly (DETECTED/FAILED).
     """
     try:
-        # Fetch events from ingestion
-        response = requests.get(f"{INGESTION_SERVICE_URL}/events", timeout=10)
-        response.raise_for_status()
-        events = [ContentEvent(**e) for e in response.json()]
-        
-        processed = 0
-        for event in events:
-            # Send to detection
-            det_response = requests.post(
-                f"{DETECTION_SERVICE_URL}/detect",
-                json={"text": event.text},
-                timeout=30
-            )
-            if det_response.status_code == 200:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{INGESTION_SERVICE_URL}/events")
+            response.raise_for_status()
+            raw_events = response.json()
+
+        all_events = [ContentEvent(**e) for e in raw_events]
+
+        # Only process events that are still marked as NEW
+        new_events: List[ContentEvent] = [
+            e for e in all_events
+            if (e.processing_status or "NEW").upper() == "NEW"
+        ]
+
+        if not new_events:
+            return {
+                "status": "success",
+                "events_fetched": len(all_events),
+                "events_processed": 0,
+                "message": "No NEW events to process."
+            }
+
+        async def process_event(event: ContentEvent) -> bool:
+            """Run detection for a single event and update status/analytics."""
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    det_response = await client.post(
+                        f"{DETECTION_SERVICE_URL}/detect",
+                        json={"text": event.text},
+                    )
+                    det_response.raise_for_status()
+
                 result = DetectionResult(**det_response.json())
-                
-                # Store analytics record
+
                 analytics_record = AnalyticsRecord(
                     event_id=event.id,
                     source=event.source,
                     text_preview=event.text[:200],
                     detection_label=result.label,
                     confidence=result.confidence,
-                    timestamp=result.timestamp
+                    timestamp=result.timestamp,
                 )
                 await analytics_store.add_record(analytics_record)
-                processed += 1
-        
+
+                _set_event_processing_status(event.id, "DETECTED")
+                return True
+            except Exception:
+                _set_event_processing_status(event.id, "FAILED")
+                return False
+
+        # Run detection concurrently for all NEW events
+        tasks = [process_event(event) for event in new_events]
+        results = await asyncio.gather(*tasks)
+        processed = sum(1 for r in results if r)
+
         return {
             "status": "success",
-            "events_fetched": len(events),
-            "events_processed": processed
+            "events_fetched": len(all_events),
+            "events_processed": processed,
+            "events_failed": len(new_events) - processed,
         }
     except Exception as e:
         return {
             "status": "error",
             "error": str(e)
         }
+
+
+def _set_event_processing_status(event_id: str, status: str) -> None:
+    """Update processing_status for a content event in the shared DB."""
+    session = db_manager.get_session()
+    try:
+        event = session.query(ContentEventDB).filter(ContentEventDB.id == event_id).first()
+        if event is not None:
+            event.processing_status = status
+            session.commit()
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":

@@ -35,10 +35,13 @@ The persistence layer is a single SQLite database file (data/astra.db) accessed 
 ASTRA uses explicit, normalized tables with concise schemas that map to SQLAlchemy models:
 
 - content_events
-  - id (PK, integer)
+  - id (PK, String(36) UUID)
   - source (text)
+  - actor_id (text; convention-based, not normalized)
+  - source_hash (text; stable hash of source+content)
   - text (text)
   - metadata_json (text; JSON-serialized)
+  - processing_status (text; NEW → DETECTED/FAILED)
   - timestamp (datetime)
 
 - detection_results
@@ -126,7 +129,7 @@ Note: Federated and distributed designs are intentionally out of scope for this 
 
 ## 10. Reproducibility and Availability
 
-- Source: https://github.com/bhardwaj-kushagra/ASTRA  
+- Source: [https://github.com/bhardwaj-kushagra/ASTRA](https://github.com/bhardwaj-kushagra/ASTRA)  
 - Environment: Python 3.11, SQLite 3, SQLAlchemy 2.x  
 - Essential artifacts: data/astra.db, data/schemas/database.py, services/*/ (microservices), tools/scripts/* (operations)  
 - Typical flow: initialize database → start services → ingest content → run detection → query analytics.  
@@ -139,6 +142,6 @@ This first stage of ASTRA demonstrates that a practical, durable analytics pipel
 
 ## References
 
-1) SQLite Documentation, https://www.sqlite.org/docs.html  
-2) SQLAlchemy 2.0 Documentation, https://docs.sqlalchemy.org  
+1) SQLite Documentation, [https://www.sqlite.org/docs.html](https://www.sqlite.org/docs.html)  
+2) SQLAlchemy 2.0 Documentation, [https://docs.sqlalchemy.org](https://docs.sqlalchemy.org)  
 3) Newman, S., Building Microservices, O’Reilly Media, 2021.  
