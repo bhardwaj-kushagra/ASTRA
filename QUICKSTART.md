@@ -274,7 +274,7 @@ python tools\scripts\test_integration.py
 ### Integrating new services
 
 - Future modules (graph intelligence, attribution, federation) follow the same pattern
-- Services communicate via REST APIs (can be replaced with message queues)
+- Services communicate via REST APIs (future work: can be replaced with message queues)
 - Shared schemas in `data/schemas/models.py`
 
 ## Troubleshooting
@@ -301,7 +301,7 @@ python tools\scripts\test_integration.py
 
 ## Next Steps
 
-- Add message queue (Redis Streams, Kafka) for asynchronous processing
+- (Future) Add message queue (Redis Streams, Kafka) for asynchronous processing
 - Implement graph intelligence service for propagation analysis
 - Build attribution service with watermarking integration
 - Deploy using Docker and Kubernetes

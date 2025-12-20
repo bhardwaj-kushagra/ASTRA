@@ -142,7 +142,7 @@ Sample Files → Ingestion Service (8001)
 - Attribution & forensics
 - Federation gateway
 - Red-team harness
-- Message queue integration (Kafka/Redis)
+- Message queue integration (Kafka/Redis) (future work only)
 - Docker containerization
 
 ---

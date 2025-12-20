@@ -17,10 +17,10 @@ All services use a **registry pattern** for extensibility:
 Current prototype uses **REST APIs** for synchronous communication:
 
 ```text
-Ingestion → Analytics → Detection (pull model)
+Ingestion (writes SQLite) → Analytics (pulls) → Detection (pull model)
 ```
 
-For production scale, migrate to **event-driven architecture**:
+For production scale, you can migrate to an **event-driven architecture** (future work; not implemented in this prototype):
 
 ```text
 Ingestion → Message Queue → Detection → Analytics
@@ -228,7 +228,7 @@ async def get_graph_insights():
 
 ---
 
-## Migration to Message Queue
+## Future: Migration to Message Queue (Not Implemented)
 
 ### Current (REST-based)
 
@@ -250,8 +250,15 @@ Ingestion → Kafka topic "content-events"
 
 ### Implementation sketch
 
-1. Install Redis or Kafka
-1. Replace `InMemoryPublisher` with `KafkaPublisher`:
+This section is a forward-looking sketch only. The current prototype uses shared SQLite + REST and does not include Kafka/Redis publishers or consumers.
+
+High-level steps:
+
+1. Add a publisher implementation (e.g., Kafka/Redis Streams) alongside `SQLitePublisher`.
+2. Add consumers to Detection/Analytics to replace the current REST pull flow.
+3. Preserve existing external APIs where possible (so the system can run in either mode).
+
+Example pseudocode (not part of this repo today):
 
 ```python
 class KafkaPublisher(EventPublisher):
@@ -263,7 +270,7 @@ class KafkaPublisher(EventPublisher):
         self.producer.send(self.topic, value=event.json())
 ```
 
-1. Add consumers in each service:
+Add consumers in each service (pseudocode):
 
 ```python
 consumer = KafkaConsumer("content-events")

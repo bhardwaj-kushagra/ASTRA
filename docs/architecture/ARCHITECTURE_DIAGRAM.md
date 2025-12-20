@@ -2,7 +2,7 @@
 
 ## High-Level System View
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────┐
 │                         ASTRA Platform                                │
 │        Adaptive Surveillance Tracking & Recognition Architecture     │
@@ -50,7 +50,7 @@
 │  │  └──────────────────────────────────────────────────────────┘  │   │
 │  │  ┌──────────────────────────────────────────────────────────┐  │   │
 │  │  │ Event Publisher                                          │  │   │
-│  │  │  - InMemoryPublisher (MVP)                               │  │   │
+│  │  │  - SQLitePublisher (MVP; shared data/astra.db)            │  │   │
 │  │  │  - [Future: Kafka/Redis Streams]                         │  │   │
 │  │  └──────────────────────────────────────────────────────────┘  │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
@@ -100,7 +100,7 @@
 
 ## Data Flow - MVP Prototype
 
-```
+```text
 1. Content Ingestion
    ┌─────────┐
    │ Sample  │
@@ -117,7 +117,7 @@
         │
         ▼
    ┌──────────────────┐
-   │ InMemoryPublisher│ ──→ Store events in memory
+     │ SQLitePublisher  │ ──→ Persist events to shared SQLite (data/astra.db)
    └──────────────────┘
 
 
@@ -162,6 +162,7 @@
 ## Extension Points
 
 ### Adding New Connectors
+
 ```python
 # services/ingestion/connectors/my_connector.py
 class MyConnector(Connector):
@@ -173,6 +174,7 @@ ConnectorRegistry.register("my-connector", MyConnector)
 ```
 
 ### Adding New Detectors
+
 ```python
 # services/detection/detectors/my_detector.py
 class MyDetector(Detector):
@@ -184,7 +186,10 @@ DetectorRegistry.register("my-detector", MyDetector)
 ```
 
 ### Future Event-Driven Architecture
-```
+
+(Future work only; not implemented in this prototype.)
+
+```text
 Ingestion ──→ Kafka Topic "content-events"
                     │
                     ├──→ Detection Service (subscriber)
@@ -202,14 +207,16 @@ Ingestion ──→ Kafka Topic "content-events"
 ## Technology Stack
 
 **Current (MVP):**
+
 - Python 3.10+
 - FastAPI (REST APIs)
 - Pydantic (data validation)
 - Hugging Face Transformers (models)
 - Jinja2 (templates)
-- In-memory storage
+- Shared SQLite (data/astra.db) via SQLAlchemy
 
 **Future (Production):**
+
 - Kafka/Redis Streams (messaging)
 - PostgreSQL (persistence)
 - NetworkX/DGL (graph analytics)
@@ -221,11 +228,13 @@ Ingestion ──→ Kafka Topic "content-events"
 ## Security Considerations
 
 **Implemented:**
+
 - Input validation via Pydantic
 - Type safety
 - Error handling
 
 **Future:**
+
 - API authentication (JWT)
 - Rate limiting
 - Secrets management (Vault)

@@ -2,7 +2,7 @@
 
 | Domain | Service | Description | Primary Interfaces |
 | --- | --- | --- | --- |
-| Data Ingestion | `services/ingestion` | Connector framework for multi-platform, multi-format content intake. | Kafka topics, REST pull adapters, storage sinks |
+| Data Ingestion | `services/ingestion` | Connector framework for multi-platform, multi-format content intake. | REST APIs; shared SQLite sink (MVP); [Future: Kafka topics] |
 | Detection | `services/detection` | Ensemble of transformer-based detectors and stylometric analyzers. | gRPC API, model registry, feature store |
 | Attribution | `services/attribution` | Watermark verification, fingerprinting, evidence management. | Vendor APIs, case database, dashboard |
 | Graph Intelligence | `services/graph-intelligence` | GNN-based propagation and coordination analysis. | Feature store, SIEM connector, alert bus |
