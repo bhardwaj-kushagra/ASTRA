@@ -218,6 +218,34 @@ Trigger Risk Analytics to pull NEW events from Ingestion, run detection concurre
 curl -X POST http://localhost:8003/sync-from-ingestion
 ```
 
+### 5. View the co-occurrence graph
+
+The dashboard embeds a simple SVG graph. You can also fetch the JSON directly:
+
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:8003/graph/cooccurrence?max_edges=250&max_nodes=220" | ConvertTo-Json -Depth 6
+```
+
+### 6. Phase 3: Threat exchange (JSON import/export)
+
+Risk Analytics supports a REST-based threat exchange format:
+
+- Export: `GET /threat-exchange/export?limit=200`
+- Import: `POST /threat-exchange/import`
+- List imported: `GET /threat-exchange/indicators`
+
+See `docs/THREAT_EXCHANGE.md` for the full format and two-instance demo.
+
+### 7. Phase 4: Manual adversarial evaluation
+
+Manual adversarial samples live under `data/samples/adversarial/`.
+
+Run a simple vs zero-shot comparison:
+
+```powershell
+python .\tools\scripts\evaluate_adversarial_detectors.py --base-url http://127.0.0.1:8002
+```
+
 ### 5. View dashboard
 
 Open browser to: <http://localhost:8003/dashboard>
@@ -301,10 +329,23 @@ python tools\scripts\test_integration.py
 
 ## Next Steps
 
-- (Future) Add message queue (Redis Streams, Kafka) for asynchronous processing
+Future work only:
+
+- Add message queue (Redis Streams, Kafka) for asynchronous processing
 - Implement graph intelligence service for propagation analysis
 - Build attribution service with watermarking integration
 - Deploy using Docker and Kubernetes
 - Add CI/CD pipelines and monitoring
+
+### Two-instance local demo (optional)
+
+To run two ASTRA stacks side-by-side (separate ports + separate SQLite files), use:
+
+```powershell
+.\tools\scripts\start-astra-stack-uvicorn.ps1 -BasePort 8000 -InstanceId astra-a
+.\tools\scripts\start-astra-stack-uvicorn.ps1 -BasePort 8100 -InstanceId astra-b
+```
+
+This uses `ASTRA_DB_PATH` and `ASTRA_INSTANCE_ID` under the hood.
 
 See `docs/roadmap.md` for full development plan.

@@ -82,6 +82,8 @@ def build_actor_sourcehash_graph(
         hash_node_id = _node_id_source_hash(source_hash)
 
         if actor_node_id not in nodes:
+            if len(nodes) >= max_nodes:
+                break
             nodes[actor_node_id] = GraphNode(
                 id=actor_node_id,
                 label=actor_id,
@@ -89,6 +91,8 @@ def build_actor_sourcehash_graph(
             )
 
         if hash_node_id not in nodes:
+            if len(nodes) >= max_nodes:
+                break
             label = source_hash[:12] + "…" if len(source_hash) > 12 else source_hash
             nodes[hash_node_id] = GraphNode(
                 id=hash_node_id,
@@ -97,10 +101,6 @@ def build_actor_sourcehash_graph(
             )
 
         edges.append(GraphEdge(source=actor_node_id, target=hash_node_id, weight=int(count)))
-
-        # Avoid unbounded node growth even if edges are capped.
-        if len(nodes) >= max_nodes:
-            break
 
     return {
         "nodes": [n.__dict__ for n in nodes.values()],

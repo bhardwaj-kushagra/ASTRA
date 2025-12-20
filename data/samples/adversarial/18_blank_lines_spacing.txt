@@ -1,0 +1,7 @@
+
+
+This sample has lots of blank lines.
+
+
+It is still harmless.
+

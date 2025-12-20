@@ -83,6 +83,27 @@ Stores analytics data for dashboard visualization.
 
 ---
 
+#### `threat_indicators`
+
+Stores imported threat intelligence summaries from other ASTRA instances (Phase 3).
+
+| Column | Type | Description |
+| --- | --- | --- |
+| id | Integer | Auto-increment primary key |
+| producer_instance_id | String(100) | Identifier of the producing instance |
+| actor_id | String(100) | Convention-based actor identifier (optional) |
+| source_hash | String(128) | Stable hash of source+content (optional) |
+| detection_label | String(50) | Indicator label |
+| max_confidence | Float | Highest confidence observed |
+| event_count | Integer | Number of events summarized |
+| first_seen | DateTime | Earliest timestamp in producer’s window |
+| last_seen | DateTime | Latest timestamp in producer’s window |
+| received_at | DateTime | When this instance imported the indicator |
+
+**Indexes:** producer_instance_id, actor_id, source_hash, detection_label, first_seen, last_seen, received_at
+
+---
+
 ## Usage
 
 ### Initialize Database
@@ -108,6 +129,12 @@ python tools/scripts/init_db.py --db-path /path/to/custom.db
 ### Database Location
 
 Default: `C:\A Developer's Stuff\ASTRA\data\astra.db`
+
+You can override the DB path per instance by setting:
+
+```powershell
+$env:ASTRA_DB_PATH = "C:\path\to\astra-other.db"
+```
 
 ---
 

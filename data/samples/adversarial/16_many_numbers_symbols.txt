@@ -1,0 +1,3 @@
+Order #12345: total=$67.89; items=3; ETA=2-3 days.
+Ref: (A1-B2-C3) / [X9] {Y7}.
+This is a normal receipt-like text.

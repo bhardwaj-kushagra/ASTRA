@@ -1,0 +1,8 @@
+Here is a snippet:
+
+```python
+def add(a, b):
+    return a + b
+```
+
+And here is the explanation: it adds two numbers.

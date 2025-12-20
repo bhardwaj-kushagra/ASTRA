@@ -85,9 +85,12 @@ curl http://localhost:8003
 #### Test 1: Ingest from Files
 
 ```powershell
+ $samplesPath = (Resolve-Path .\data\samples).Path
+ $samplesPath = $samplesPath -replace '\\', '\\\\'
+
 curl -X POST http://localhost:8001/ingest `
   -H "Content-Type: application/json" `
-  -d '{\"connector_type\":\"file\",\"config\":{\"path\":\"..\\..\\data\\samples\",\"pattern\":\"*.txt\"}}'
+  -d ("{\"connector_type\":\"file\",\"config\":{\"path\":\"$samplesPath\",\"pattern\":\"*.txt\"}}")
 ```
 
 **What this does:**
@@ -407,6 +410,44 @@ This provides a visual HTML interface showing:
 
 ---
 
+### Step 10: Graph intelligence (co-occurrence)
+
+**Endpoint:** `GET http://localhost:8003/graph/cooccurrence`
+
+```powershell
+curl "http://localhost:8003/graph/cooccurrence?max_edges=250&max_nodes=220"
+```
+
+This is also rendered in the dashboard UI.
+
+---
+
+### Step 11: Phase 3 demo - Threat exchange (JSON)
+
+**Export endpoint:** `GET http://localhost:8003/threat-exchange/export`
+
+```powershell
+curl "http://localhost:8003/threat-exchange/export?limit=5"
+```
+
+For a two-instance exchange demo, see `docs/THREAT_EXCHANGE.md` and run:
+
+```powershell
+.\tools\scripts\threat-exchange-demo.ps1 -From http://127.0.0.1:8003 -To http://127.0.0.1:8103
+```
+
+---
+
+### Step 12: Phase 4 demo - Manual adversarial evaluation
+
+Run a side-by-side comparison between `simple` and `zero-shot` detectors:
+
+```powershell
+python .\tools\scripts\evaluate_adversarial_detectors.py --base-url http://127.0.0.1:8002
+```
+
+---
+
 ## Advanced Demo Scenarios
 
 ### Scenario 1: Batch Processing Pipeline
@@ -415,9 +456,12 @@ This provides a visual HTML interface showing:
 
 ```powershell
 # 1. Ingest multiple files
+$samplesPath = (Resolve-Path .\data\samples).Path
+$samplesPath = $samplesPath -replace '\\', '\\\\'
+
 curl -X POST http://localhost:8001/ingest `
   -H "Content-Type: application/json" `
-  -d '{\"connector_type\":\"file\",\"config\":{\"path\":\"..\\..\\data\\samples\",\"pattern\":\"*.txt\"}}'
+  -d ("{\"connector_type\":\"file\",\"config\":{\"path\":\"$samplesPath\",\"pattern\":\"*.txt\"}}")
 
 # 2. Sync to analytics (processes through detection)
 curl -X POST http://localhost:8003/sync-from-ingestion

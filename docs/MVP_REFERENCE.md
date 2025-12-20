@@ -1,7 +1,7 @@
 # ASTRA - MVP Reference Documentation
 
 **Date:** December 20, 2025  
-**Status:** Phase 1 (Prototype / MVP)
+**Status:** Prototype / MVP (Phases 1–4 implemented as lightweight demos)
 
 ## 1. Project Overview
 
@@ -85,13 +85,13 @@ The project is structured for expansion. While the "Detection Core" is working, 
 
 - **Phase 3: Federation**
   - *Goal*: Allow different ASTRA instances to share threat intelligence summaries.
-  - *Status*: Folder `services/federation` is empty.
-  - *Plan*: Define a JSON threat exchange format and demonstrate two instances exchanging summaries.
+  - *Status*: Implemented as a REST-based JSON threat exchange in Risk Analytics.
+  - *How*: See `docs/THREAT_EXCHANGE.md` and `tools/scripts/threat-exchange-demo.ps1`.
 
 - **Phase 4: Red Teaming**
   - *Goal*: Adversarial testing of the detectors.
-  - *Status*: Folder `services/red-team` is empty.
-  - *Plan*: Manually craft 10–20 adversarial samples and compare heuristic vs zero-shot failure modes.
+  - *Status*: Implemented via manual samples + comparison script.
+  - *How*: See `data/samples/adversarial/README.md` and `tools/scripts/evaluate_adversarial_detectors.py`.
 
 ---
 

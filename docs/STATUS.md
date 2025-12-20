@@ -12,7 +12,7 @@
 ### Storage
 
 - ✅ **SQLite Database** - All data persists across restarts
-- 📊 **3 Tables:** content_events, detection_results, analytics_records
+- 📊 **Tables:** content_events, detection_results (reserved), analytics_records, threat_indicators
 - 💾 **Location:** `C:\A Developer's Stuff\ASTRA\data\astra.db`
 
 ### Processing Workflow
@@ -20,6 +20,9 @@
 - ✅ **Event lifecycle tracking** via `processing_status`: `NEW` → `DETECTED` or `FAILED`
 - ✅ **Async sync**: Risk Analytics processes only `NEW` events and updates `processing_status` directly in the shared SQLite DB
 - ✅ **Attribution-ready fields**: `actor_id` (convention-based string) and `source_hash` (stable content hash)
+- ✅ **Graph view**: `/graph/cooccurrence` (also embedded in the dashboard)
+- ✅ **Threat exchange**: `/threat-exchange/export` + `/threat-exchange/import` (Phase 3)
+- ✅ **Manual adversarial evaluation**: `tools/scripts/evaluate_adversarial_detectors.py` (Phase 4)
 
 ---
 
@@ -106,15 +109,14 @@ Invoke-WebRequest -Uri "http://localhost:8003/sync-from-ingestion" -Method POST
 ## Architecture Confirmed
 
 ```text
-Sample Files → Ingestion Service (8001)
-                    ↓
-              [ContentEvent]
-                    ↓
-           Detection Service (8002)
-                    ↓
-           [DetectionResult]
-                    ↓
-         Analytics Dashboard (8003)
+Sample Files/URLs → Ingestion Service (8001)
+          ↓
+        SQLite: content_events
+          ↓
+Risk Analytics (8003) pulls NEW events and calls Detection (8002)
+          ↓
+    SQLite: analytics_records (for dashboard)
+    SQLite: threat_indicators (imports from peers)
 ```
 
 ---

@@ -42,7 +42,12 @@ Core building blocks:
 - Persistence adapters isolate data access (Publisher/Store pattern).
 
 Data flow (local, single-node):
-source → ingestion (/ingest) → SQLite:content_events → detection (/detect) → SQLite:detection_results → analytics (/analyze or /sync-from-ingestion) → SQLite:analytics_records → dashboard (/dashboard)
+source → ingestion (/ingest) → SQLite:content_events → risk-analytics (/sync-from-ingestion) → detection (/detect) → SQLite:analytics_records → dashboard (/dashboard)
+
+Additional prototype features:
+
+- Graph view: `/graph/cooccurrence` (JSON + embedded SVG in dashboard)
+- Threat exchange (Phase 3): `/threat-exchange/export` + `/threat-exchange/import` + `/threat-exchange/indicators`
 
 Concurrency model:
 
@@ -93,14 +98,15 @@ sequenceDiagram
     ING-->>Cl: 200 OK (ingested IDs)
 
     Cl->>DET: POST /detect { text }
-    DET->>DB: INSERT detection_results
     DET-->>Cl: 200 OK { label, confidence }
 
-    Cl->>ANA: POST /analyze { text }
-    ANA->>DET: /detect { text }
+    Cl->>ANA: POST /sync-from-ingestion
+    ANA->>ING: GET /events
+    ANA->>DET: POST /detect { text } (concurrent)
     DET-->>ANA: { label, confidence }
     ANA->>DB: INSERT analytics_records
-    ANA-->>Cl: 200 OK { stored: true }
+    ANA->>DB: UPDATE content_events.processing_status
+    ANA-->>Cl: 200 OK { events_processed }
 
     Cl->>ANA: GET /dashboard | /records | /stats
     ANA->>DB: SELECT aggregates/recent
@@ -125,14 +131,16 @@ sequenceDiagram
       - rag_detector.py: Embedding retrieval + kNN detector (Sentence Transformers).
       - zero_shot_detector.py: Zero-shot classifier (Transformers pipeline; supports local model folder).
   - risk-analytics/
-    - main.py: FastAPI app; health `/`, dashboard `/dashboard`, records `/records`, stats `/stats`, sync `/sync-from-ingestion`.
+    - main.py: FastAPI app; health `/`, dashboard `/dashboard`, records `/records`, stats `/stats`, sync `/sync-from-ingestion`, graph `/graph/cooccurrence`, threat exchange `/threat-exchange/*`.
     - sqlite_store.py: CRUD for analytics_records; query aggregates.
+    - cooccurrence_graph.py: Builds the lightweight actor↔source_hash co-occurrence graph.
+    - threat_exchange.py: Phase 3 JSON format models/helpers.
     - templates/
       - dashboard.html: HTML + Jinja2 template for recent records + stats.
 
 - data/schemas/
   - models.py: Pydantic models (ContentEvent, DetectionRequest/Result, AnalyticsRecord).
-  - database.py: SQLAlchemy ORM models (ContentEventDB, DetectionResultDB, AnalyticsRecordDB) and DatabaseManager.
+  - database.py: SQLAlchemy ORM models (ContentEventDB, DetectionResultDB [reserved], AnalyticsRecordDB, ThreatIndicatorDB) and DatabaseManager.
 
 - tools/scripts/
   - init_db.py: Initializes (creates) schema if missing.
@@ -141,6 +149,9 @@ sequenceDiagram
   - check-services.ps1: Robust health probe using IPv4 first with retries/backoff.
   - stop-all.ps1: Kills service process trees, waits until ports are free.
   - restart-all.ps1: Stop + ensure DB + start sequence.
+  - start-astra-stack-uvicorn.ps1: Start a full stack on configurable ports + a per-instance SQLite file.
+  - threat-exchange-demo.ps1: Export from one instance and import into another.
+  - evaluate_adversarial_detectors.py: Phase 4 evaluation script (simple vs zero-shot).
 
 - docs/
   - ASTRA_Proposed_Solution.md: IEEE-style article of the completed stage.

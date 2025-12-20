@@ -1,0 +1,4 @@
+Hey — quick update: I pushed the fix and it seems fine locally.
+
+In summary, the system now supports configurable parameters, improved observability, and clearer operational guidance.
+Let me know if you want me to roll it back; I'm not 100% confident about edge cases.

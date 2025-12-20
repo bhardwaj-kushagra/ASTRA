@@ -1,6 +1,6 @@
 ﻿# ASTRA – Adaptive Surveillance Tracking and Recognition Architecture
 
-**Status: ✅ PROTOTYPE OPERATIONAL** | [Quick Start](#getting-started-wip) | [Dashboard](http://localhost:8003/dashboard) | [Developer Guide](docs/DEVELOPER_GUIDE.md)
+**Status: ✅ PROTOTYPE OPERATIONAL** | [Quick Start](QUICKSTART.md) | [Demo Guide](DEMO_GUIDE.md) | [Developer Guide](docs/DEVELOPER_GUIDE.md)
 
 ASTRA is a multi-layered defense platform that detects, attributes, and mitigates hostile information operations powered by large language models (LLMs). The system combines AI-driven analytics, graph intelligence, forensic tooling, and policy enforcement to protect national security partners from malicious narrative campaigns.
 
@@ -20,6 +20,22 @@ ASTRA is a multi-layered defense platform that detects, attributes, and mitigate
 5. **Risk Analytics & Visualization** – Dashboards, trend analytics, predictive modeling, and reporting.
 6. **Vendor Collaboration & Red-Teaming** – Continuous adversarial testing, guardrail validation, and disclosure workflows.
 7. **Privacy & Compliance** – Differential privacy, federated learning, explainability, and transparency reporting.
+
+## Prototype (What Exists Today)
+
+This repo currently implements a working, local prototype (Windows-first) using shared SQLite + REST orchestration:
+
+- Ingestion persists `content_events` with `actor_id`, `source_hash`, and `processing_status`.
+- Risk Analytics pulls only `NEW` events via `POST /sync-from-ingestion`, runs detection concurrently, and updates `processing_status` to `DETECTED`/`FAILED`.
+- A lightweight co-occurrence graph is available at `GET /graph/cooccurrence` and is embedded in the dashboard.
+- Phase 3 threat exchange is implemented as REST-based JSON import/export.
+- Phase 4 evaluation is implemented via a manual adversarial sample set plus a comparison script.
+
+Key docs:
+
+- `docs/MVP_REFERENCE.md`
+- `docs/THREAT_EXCHANGE.md`
+- `data/samples/adversarial/README.md`
 
 ## Repository Structure
 
@@ -75,6 +91,12 @@ High-level milestones are tracked in `docs/roadmap.md`. Each phase concludes wit
    - Ingestion: `http://127.0.0.1:8001`
    - Detection: `http://127.0.0.1:8002`
    - Dashboard: `http://127.0.0.1:8003/dashboard`
+
+### Phase 3 / Phase 4 scripts
+
+- Threat exchange demo (two instances): `tools/scripts/threat-exchange-demo.ps1`
+- Start an additional stack on different ports + DB: `tools/scripts/start-astra-stack-uvicorn.ps1`
+- Adversarial comparison (simple vs zero-shot): `tools/scripts/evaluate_adversarial_detectors.py`
 
 ### Detection Models (Prototype)
 

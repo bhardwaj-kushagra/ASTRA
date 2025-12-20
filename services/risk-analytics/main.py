@@ -1,5 +1,5 @@
 """Risk analytics service main application."""
-from fastapi import FastAPI, Request, Response, Form, UploadFile, File
+from fastapi import FastAPI, Request, Response, Form, UploadFile, File, Query, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -11,14 +11,16 @@ import os
 import asyncio
 import requests
 import httpx
+from sqlalchemy import func
 
 # Setup path for shared schemas and database models
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'schemas')))
 
 from models import AnalyticsRecord, DetectionRequest, DetectionResult, ContentEvent
-from database import DatabaseManager, ContentEventDB
+from database import DatabaseManager, ContentEventDB, AnalyticsRecordDB, ThreatIndicatorDB
 from sqlite_store import SQLiteAnalyticsStore
 from cooccurrence_graph import build_actor_sourcehash_graph
+from threat_exchange import ThreatExchangeEnvelope, ThreatExchangeProducer, ThreatIndicator, build_summary
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -37,6 +39,10 @@ db_manager = DatabaseManager()
 # Configuration for service endpoints
 DETECTION_SERVICE_URL = os.getenv("DETECTION_SERVICE_URL", "http://localhost:8002")
 INGESTION_SERVICE_URL = os.getenv("INGESTION_SERVICE_URL", "http://localhost:8001")
+
+
+def _instance_id() -> str:
+    return os.getenv("ASTRA_INSTANCE_ID") or os.getenv("COMPUTERNAME") or "astra-instance"
 
 
 def _fetch_detector_info() -> tuple[Optional[str], list[str]]:
@@ -257,7 +263,10 @@ async def get_stats():
 
 
 @app.get("/graph/cooccurrence")
-async def get_cooccurrence_graph():
+async def get_cooccurrence_graph(
+    max_edges: int = Query(300, ge=1, le=5000, description="Maximum number of edges to return"),
+    max_nodes: int = Query(250, ge=2, le=5000, description="Maximum number of nodes to return"),
+):
     """Return a co-occurrence graph over actor_id and source_hash.
 
     This uses direct DB reads from the shared SQLite database.
@@ -267,7 +276,133 @@ async def get_cooccurrence_graph():
         return build_actor_sourcehash_graph(
             session=session,
             ContentEventDB=ContentEventDB,
+            max_edges=max_edges,
+            max_nodes=max_nodes,
         )
+    finally:
+        session.close()
+
+
+@app.get("/threat-exchange/export")
+async def export_threat_exchange(
+    limit: int = Query(200, ge=1, le=5000, description="Maximum number of indicators to export"),
+    base_url: Optional[str] = Query(None, description="Optional base URL to include in producer metadata"),
+):
+    """Export threat indicators as a versioned JSON envelope.
+
+    Indicators are derived from local analytics records joined to content_events.
+    """
+    session = db_manager.get_session()
+    try:
+        rows = (
+            session.query(
+                ContentEventDB.actor_id,
+                ContentEventDB.source_hash,
+                AnalyticsRecordDB.detection_label,
+                func.max(AnalyticsRecordDB.confidence),
+                func.count(AnalyticsRecordDB.id),
+                func.min(AnalyticsRecordDB.timestamp),
+                func.max(AnalyticsRecordDB.timestamp),
+            )
+            .join(AnalyticsRecordDB, AnalyticsRecordDB.event_id == ContentEventDB.id)
+            .filter(ContentEventDB.actor_id.isnot(None))
+            .filter(ContentEventDB.source_hash.isnot(None))
+            .group_by(ContentEventDB.actor_id, ContentEventDB.source_hash, AnalyticsRecordDB.detection_label)
+            .order_by(func.count(AnalyticsRecordDB.id).desc())
+            .limit(limit)
+            .all()
+        )
+
+        indicators: List[ThreatIndicator] = []
+        for actor_id, source_hash, label, max_conf, count, first_seen, last_seen in rows:
+            indicators.append(
+                ThreatIndicator(
+                    actor_id=actor_id,
+                    source_hash=source_hash,
+                    detection_label=label,
+                    max_confidence=float(max_conf or 0.0),
+                    event_count=int(count or 0),
+                    first_seen=first_seen,
+                    last_seen=last_seen,
+                )
+            )
+
+        producer = ThreatExchangeProducer(instance_id=_instance_id(), base_url=base_url)
+        envelope = ThreatExchangeEnvelope(
+            producer=producer,
+            indicators=indicators,
+            summary=build_summary(indicators=indicators),
+        )
+        return envelope.model_dump()
+    finally:
+        session.close()
+
+
+@app.post("/threat-exchange/import")
+async def import_threat_exchange(envelope: ThreatExchangeEnvelope):
+    """Import a threat exchange envelope and persist indicators.
+
+    This is intentionally additive: it does not modify local content_events or analytics_records.
+    """
+    if not envelope.schema_version.startswith("astra-threat-exchange-"):
+        raise HTTPException(status_code=400, detail=f"Unsupported schema_version: {envelope.schema_version}")
+
+    session = db_manager.get_session()
+    try:
+        inserted = 0
+        for ind in envelope.indicators:
+            if ind.event_count < 1:
+                continue
+            db_row = ThreatIndicatorDB(
+                producer_instance_id=envelope.producer.instance_id,
+                actor_id=ind.actor_id,
+                source_hash=ind.source_hash,
+                detection_label=ind.detection_label,
+                max_confidence=float(ind.max_confidence),
+                event_count=int(ind.event_count),
+                first_seen=ind.first_seen,
+                last_seen=ind.last_seen,
+            )
+            session.add(db_row)
+            inserted += 1
+
+        session.commit()
+        return {
+            "status": "success",
+            "producer_instance_id": envelope.producer.instance_id,
+            "inserted": inserted,
+        }
+    finally:
+        session.close()
+
+
+@app.get("/threat-exchange/indicators")
+async def list_imported_indicators(
+    limit: int = Query(200, ge=1, le=5000),
+    producer_instance_id: Optional[str] = Query(None, description="Filter by producer instance"),
+):
+    """List imported threat indicators."""
+    session = db_manager.get_session()
+    try:
+        q = session.query(ThreatIndicatorDB).order_by(ThreatIndicatorDB.received_at.desc())
+        if producer_instance_id:
+            q = q.filter(ThreatIndicatorDB.producer_instance_id == producer_instance_id)
+        rows = q.limit(limit).all()
+        return [
+            {
+                "id": r.id,
+                "producer_instance_id": r.producer_instance_id,
+                "actor_id": r.actor_id,
+                "source_hash": r.source_hash,
+                "detection_label": r.detection_label,
+                "max_confidence": r.max_confidence,
+                "event_count": r.event_count,
+                "first_seen": r.first_seen,
+                "last_seen": r.last_seen,
+                "received_at": r.received_at,
+            }
+            for r in rows
+        ]
     finally:
         session.close()
 

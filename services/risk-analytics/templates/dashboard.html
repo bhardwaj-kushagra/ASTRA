@@ -316,7 +316,7 @@
             var svg = document.getElementById('cooccurrence-graph');
             if (!statusEl || !svg) return;
 
-            fetch('/graph/cooccurrence', { headers: { 'Accept': 'application/json' } })
+            fetch('/graph/cooccurrence?max_edges=250&max_nodes=220', { headers: { 'Accept': 'application/json' } })
                 .then(function (r) {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
                     return r.json();
