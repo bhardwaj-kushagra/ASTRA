@@ -23,11 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Setup automation scripts for Windows PowerShell
 - Integration test framework
 - Sample data for testing
+- Crash-recovery and stress validation notes for `processing_status` lifecycle
+- Co-occurrence graph enrichments: actor namespace coloring, tooltips with counts, edge thickness scaled by co-occurrence weight
 
 ### Changed
 
 - RAG detector implementation: now uses Sentence Transformers embeddings + kNN retrieval over a small labeled knowledge base
 - Docs updated to reflect detector switching, offline model paths, and dashboard inputs
+- Docs now state intentional shared SQLite use, concurrency caveats, lifecycle states, actor_id namespaces, and migration path
+- STATUS updated with crash-recovery + stress run results (5k/10k events with heuristic detector)
 
 ### Architecture
 

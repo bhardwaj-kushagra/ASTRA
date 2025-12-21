@@ -43,6 +43,25 @@
 - Successfully ingested 2 sample files
 - Event IDs generated and stored
 
+### 3. Crash-Recovery Validation (processing_status) ✅
+
+| Stage | NEW | DETECTED | FAILED | Notes |
+| --- | ---: | ---: | ---: | --- |
+| Before crash | 1500 | 2 | 0 | Seeded synthetic events (namespaced actor_id) |
+| After killing detection mid-sync | 1402 | 2 | 98 | Partial batch failed while detection was offline |
+| After recovery rerun | 0 | 1502 | 0 | Reset FAILED→NEW, reprocessed; no corruption |
+
+Behavior confirmed: `/sync-from-ingestion` only reads `NEW`; existing `DETECTED` rows were untouched; recovery progressed all rows to `DETECTED` with zero lingering `FAILED`.
+
+### 4. Stress Runs (heuristic/simple detector) ✅
+
+| Run | Events | Duration (s) | p50 (s) | p95 (s) | FAILED | DB size after run |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 5k | 5000 | 61.13 | 0.008 | 0.030 | 0 | 3.52 MB |
+| 10k | 10000 | 138.16 | 0.010 | 0.031 | 0 | 8.70 MB |
+
+Notes: Edge width in the dashboard graph now tracks co-occurrence counts; actor nodes color by namespace (file/http/cluster/other) with tooltips showing `actor_id` and count.
+
 ---
 
 ## How to Use
