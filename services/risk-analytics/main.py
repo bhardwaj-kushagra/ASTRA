@@ -184,10 +184,26 @@ async def dashboard_set_detector(request: Request, detector_name: str = Form(...
     try:
         resp = requests.post(
             f"{DETECTION_SERVICE_URL}/detector/{detector_name}",
-            timeout=10,
+            timeout=60,
         )
         resp.raise_for_status()
         return RedirectResponse(url="/dashboard", status_code=303)
+    except requests.exceptions.Timeout as exc:  # pragma: no cover - UI path
+        stats = await analytics_store.get_stats()
+        recent_records = await analytics_store.get_recent(limit=50)
+        active_detector, available_detectors = _fetch_detector_info()
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                "stats": stats,
+                "records": recent_records,
+                "active_detector": active_detector,
+                "available_detectors": available_detectors,
+                "error": "Detector switch is taking too long (zero-shot may be loading). Retry in a few seconds.",
+            },
+            status_code=504,
+        )
     except Exception as exc:  # pragma: no cover - UI path
         stats = await analytics_store.get_stats()
         recent_records = await analytics_store.get_recent(limit=50)
