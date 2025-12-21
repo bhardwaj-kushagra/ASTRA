@@ -249,7 +249,19 @@ tr:hover {
     stroke: rgba(102, 126, 234, 0.25);
 }
 
-.graph-node-actor {
+.graph-node-actor-file {
+    fill: #1b6ef3;
+}
+
+.graph-node-actor-http {
+    fill: #f39c12;
+}
+
+.graph-node-actor-cluster {
+    fill: #16a085;
+}
+
+.graph-node-actor-other {
     fill: #667eea;
 }
 

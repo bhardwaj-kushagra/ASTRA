@@ -14,6 +14,11 @@ Welcome to the knowledge base for ASTRA (Adaptive Surveillance Tracking and Reco
 - Detection service supports three detectors (`simple`, `rag`, `zero-shot`) and can be switched at runtime.
 - Offline/air-gapped runs are supported by pre-downloading models and setting `ZERO_SHOT_MODEL_PATH` / `RAG_MODEL_PATH`.
 - The analytics dashboard supports direct text analysis, file upload analysis, and detector selection.
+- Shared SQLite (`data/astra.db`) is intentional for the prototype: one lightweight store is used by ingestion, detection, and analytics to keep end-to-end demos simple.
+- Concurrency caveat: SQLite is reliable for low/medium volume with a single writer; risk-analytics updates `processing_status` directly, so avoid parallel bulk writers or long-lived transactions.
+- Lifecycle states: `processing_status` flows `NEW → DETECTED | FAILED`; `/sync-from-ingestion` only pulls `NEW` items and leaves prior `DETECTED` rows untouched.
+- `actor_id` conventions: prefix namespaces (`file:`, `http:`, `cluster:`) are used for graph coloring and attribution; other prefixes are allowed but treated as `other`.
+- Migration path: move to Postgres + a queue (Kafka/Redis) for scaling; reuse the same `processing_status` state machine and keep SQLite as the local cache.
 
 ## Most Used Docs
 

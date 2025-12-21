@@ -295,7 +295,11 @@
                     circle.setAttribute('cx', pos.x);
                     circle.setAttribute('cy', pos.y);
                     circle.setAttribute('r', '7');
-                    circle.setAttribute('class', node.type === 'actor' ? 'graph-node graph-node-actor' : 'graph-node graph-node-hash');
+                    var ns = (node.namespace || 'other').toLowerCase();
+                    var circleClass = node.type === 'actor'
+                        ? 'graph-node graph-node-actor graph-node-' + ns
+                        : 'graph-node graph-node-hash';
+                    circle.setAttribute('class', circleClass);
                     g.appendChild(circle);
 
                     var text = svgEl('text');
@@ -305,6 +309,12 @@
                     text.setAttribute('class', 'graph-label');
                     text.textContent = node.label;
                     g.appendChild(text);
+
+                    var title = svgEl('title');
+                    var labelText = node.raw_label || node.label;
+                    var tooltip = (node.type === 'actor' ? 'actor_id: ' : 'source_hash: ') + labelText + ' • count: ' + (node.count || 0);
+                    title.textContent = tooltip;
+                    g.appendChild(title);
 
                     svg.appendChild(g);
                 }
@@ -326,7 +336,7 @@
                     if (!result.rendered) {
                         statusEl.textContent = 'No graph data yet (need events with actor_id + source_hash).';
                     } else {
-                        statusEl.textContent = 'Clusters are connected components from co-occurrence counts.';
+                        statusEl.textContent = 'Colors = actor_id namespace (file/http/cluster/other); edge width = co-occurrence count.';
                     }
                 })
                 .catch(function (err) {
